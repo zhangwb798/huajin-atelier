@@ -38,3 +38,22 @@ button.cta:hover{background:var(--cinnabar);color:white}
 
 /* v3 content journey */
 .background{position:absolute;height:100svh}.shell{isolation:isolate}.hero{flex:none;min-height:calc(100svh - 6rem)}.story{position:relative;z-index:10;background:white}.story-section{padding:clamp(3rem,7vw,7rem) var(--pad-x);border-top:1px solid #e6e6e0;max-width:1600px;margin:auto}.section-label{font-size:.66rem;letter-spacing:.14em;color:var(--cinnabar)}.story h2{font-family:'Noto Serif SC',serif;font-weight:600;font-size:clamp(1.8rem,3.2vw,3rem);line-height:1.6;letter-spacing:.08em;margin:1.1rem 0}.story h2 em{font-style:normal;color:var(--cinnabar)}.section-lead{max-width:38rem;font-size:.88rem;line-height:2;color:#777}.line-grid{display:grid;grid-template-columns:1fr 1fr;margin-top:3rem;border-top:1px solid #ccc}.line-grid>article{padding:2rem 2rem 0 0}.line-grid>article+article{padding-left:2rem;border-left:1px solid #ddd}.story h3{font-family:'Noto Serif SC',serif;font-size:1.2rem;font-weight:600;line-height:1.7;margin:1rem 0}.story p,.story li{font-size:.8rem;line-height:2;color:#777}.story ul{padding-left:1.2rem;margin:1.5rem 0}.line-bottom{display:flex;justify-content:space-between;gap:1rem;align-items:center;border-top:1px solid #eee;padding-top:1.5rem;margin-top:2rem}.line-bottom span{font-size:1.2rem}.line-bottom small{display:block;font-size:.6rem;color:#888;margin-top:.5rem}.line-bottom button{display:flex;align-items:center;gap:.5rem;color:var(--cinnabar);font-size:.8rem}.scene-grid{display:grid;grid-template-columns:repeat(3,1fr);margin-top:2.5rem;gap:2rem}.scene-grid>button{text-align:left;border-top:1px solid #ccc;padding:1.5rem 0;display:flex;flex-direction:column;align-items:stretch}.scene-grid h3{display:flex;justify-content:space-between;align-items:center}.scene-grid p{flex:1}.scene-grid strong{font-size:1.4rem;font-weight:500;margin-top:1.3rem}.scene-grid small{font-size:.7rem}.story .section-note{font-size:.68rem;line-height:1.9;color:#999;margin-top:1.7rem}.craft-columns{display:grid;grid-template-columns:1fr 1fr;gap:5rem;margin-top:1rem}.craft-columns article{border-top:1px solid #ddd;padding:1rem 0}.craft-columns article>span{font-size:.6rem;color:var(--cinnabar)}.craft-columns article h3{margin:.5rem 0}.process-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2rem;margin-top:2.5rem}.process-grid h3{font-size:1rem}.faq details{border-bottom:1px solid #ddd;padding:1.4rem 0;max-width:60rem}.faq summary{cursor:pointer;font-size:.9rem}.faq details p{margin:1rem 0 0;max-width:48rem}.story a{color:var(--cinnabar)}@media(max-width:767px){.line-grid,.craft-columns{grid-template-columns:1fr;gap:2rem}.line-grid>article+article{padding:2rem 0 0;border-left:0;border-top:1px solid #ddd}.line-grid>article{padding-right:0}.scene-grid,.process-grid{grid-template-columns:1fr 1fr;gap:1.5rem}.line-bottom{flex-wrap:wrap}.hero{min-height:auto}.background{display:none}}@media(max-width:420px){.scene-grid,.process-grid{grid-template-columns:1fr}.story-section{padding-top:3rem;padding-bottom:3rem}}
+/* Full-screen customization workspace */
+.overlay{background:#fff;backdrop-filter:none}
+.drawer,.drawer.wide{width:100%;max-width:none;border-left:0;animation:none}
+.drawer-head{padding:clamp(1rem,2.5vw,2rem) var(--pad-x)}
+.drawer-head button{border:1px solid #ddd;border-radius:50%;display:grid;place-items:center}
+.drawer-body{padding:0 var(--pad-x) 3rem;width:100%;scrollbar-gutter:stable}
+.drawer-body>.intro{max-width:65rem}
+.drawer-body .choices{gap:.75rem}
+.drawer-body .choices button{min-width:4.5rem;padding:.8rem 1.2rem}
+.drawer-body .module{max-width:none;padding:1.25rem 0}
+.drawer-body .field textarea{min-height:6rem}
+.drawer-body .total{margin-top:2rem}
+.drawer-body>.solid,.drawer-body>.outline,.drawer-body>.text-btn{max-width:32rem}
+.drawer-body .garment>svg{height:clamp(18rem,40vh,28rem);width:auto;max-width:100%}
+.drawer-body .empty{max-width:32rem;margin:auto}
+.drawer-foot{padding:.8rem var(--pad-x)}
+@media(min-width:900px){.drawer-body .fields{grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem 2rem}.drawer-body .field input{padding:1rem}.drawer-body h3{margin-top:2.4rem}.drawer-body .summary-row{padding:1.2rem 0}}
+@media(max-width:480px){.drawer-body .choices{gap:.5rem}.drawer-body .choices button{min-width:3rem;padding:.65rem .8rem}}
+
