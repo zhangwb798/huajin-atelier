@@ -7,7 +7,7 @@ type Outfit = {
   primary: string; secondary: string[]; custom: string; extras: string[];
 };
 
-const asset = (folder: 'textures' | 'motifs', name: string) =>
+const asset = (folder: 'textures' | 'motifs' | 'accessories', name: string) =>
   `./assets/preview/${folder}/${encodeURIComponent(name)}.png`;
 
 export const motifImage = (name: string) => asset('motifs', name);
@@ -64,6 +64,9 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const cuff = wide ? 'M51 230l40 19-3 6-40-19Z'
     : southern ? 'M110 150l25 14-1 6-23-14Z'
     : 'M76 178l35 19-3 6-35-20Z';
+  const cuffPlacement = wide ? 'translate(51 230) rotate(25)'
+    : southern ? 'translate(110 150) rotate(29)' : 'translate(76 178) rotate(29)';
+  const cuffWidth = wide ? 44 : southern ? 28 : 40;
   const collar = 'M162 106V94Q173 94 180 103Q187 94 198 94V106L180 121Z';
   const mirror = 'translate(360 0) scale(-1 1)';
   const cape = 'M128 120Q68 191 48 299Q180 331 312 299Q292 191 232 120Z';
@@ -131,6 +134,10 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
         </g>
         <g data-layer="accessory" pointerEvents="none">
           <path d={cuff} fill={trim}/><path d={cuff} transform={mirror} fill={trim}/>
+          {studs && [undefined, mirror].map((transform, index) =>
+            <g key={index} transform={transform}>
+              <image href={asset('accessories','袖口')} transform={cuffPlacement} width={cuffWidth} height="7" preserveAspectRatio="none"/>
+            </g>)}
           <path d="M162 95q12 1 18 8 6-7 18-8M126 304q54 15 108 0" fill="none" stroke={trim} strokeWidth="1.8"/>
           {has('云肩绣片') && <path d="M132 121l28-8 20 16 20-16 28 8 12 19-24 14-16-10-20 10-20-10-16 10-24-14Z" fill={trim} fillOpacity=".65" stroke={trim}/>}
           {has('龙凤胸片') && <g>
@@ -144,12 +151,19 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           {has('织锦头饰') && <path d="M152 82q28-34 56 0l-3-14-13 4-12-12-12 12-13-4Z" fill={trim} stroke={color}/>}
           {Array.from({length: fasteners}, (_, index) => {
             const y = 130 + index * (fasteners === 7 ? 25 : 37);
+            if (stage && form['扣型'] !== '钻扣') {
+              return <image key={index} href={asset('accessories','盘扣')} x="164" y={y - 4} width="32" height="8"/>;
+            }
             return <g key={index} stroke={trim}>
               <path d={`M166 ${y}q14 -5 28 0q-14 5 -28 0Z`} fill={color} strokeWidth="1.5"/>
               <circle cx="180" cy={y} r="2.8" fill={stage && form['扣型'] === '钻扣' ? diamondColor(index) : trim}/>
             </g>;
           })}
-          {studs && Array.from({length: 42}, (_, index) =>
+          {studs && (!form['钻色'] || form['钻色'] === '白钻') &&
+            Array.from({length: 6}, (_, index) =>
+              <image key={index} href={asset('accessories','水钻')} x={145 + index % 3 * 25}
+                y={150 + Math.floor(index / 3) * 88} width={form['装饰'] === '满天星宽钻' ? 22 : 17} height="23"/>)}
+          {studs && ['彩钻','黄钻'].includes(form['钻色']) && Array.from({length: 42}, (_, index) =>
             <circle key={index} cx={145 + index % 7 * 11} cy={156 + Math.floor(index / 7) * 25}
               r={form['装饰'] === '满天星宽钻' ? 1.65 : 1.15} fill={diamondColor(index)}
               stroke="#73695a" strokeWidth=".3"/>)}
