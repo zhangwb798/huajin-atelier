@@ -25,8 +25,8 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const id = useId();
   const drag = useRef<{pointer: number; dx: number; dy: number} | null>(null);
   const motifs = [
-    ...(cfg.primary ? [{name: cfg.primary, x: 180, y: 174, size: 64}] : []),
-    ...cfg.secondary.map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 36})),
+    ...(cfg.primary ? [{name: cfg.primary, x: 180, y: 174, size: 44}] : []),
+    ...cfg.secondary.map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 24})),
   ];
 
   const showSample = view === 'sample' || (view === null && motifs.length === 0);
@@ -102,6 +102,13 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
       <svg viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
         aria-label={`${cfg.gender}、${cfg.style}、${material}、${cfg.color}的平面设计稿`}>
         <defs>
+          <pattern id={`${id}-stitches`} width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(32)">
+            <path d="M0 .5H2.2" stroke="#fff5df" strokeWidth=".38" opacity=".48"/>
+            <path d="M0 1.4H2.2" stroke="#38291b" strokeWidth=".30" opacity=".32"/>
+          </pattern>
+          <filter id={`${id}-thread-relief`} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+            <feDropShadow dx="0" dy=".42" stdDeviation=".28" floodColor="#322719" floodOpacity=".32"/>
+          </filter>
           <clipPath id={`${id}-garment`}>
             {hasCape && <path d={cape}/>}
             <path d={sleeve}/><path d={sleeve} transform={mirror}/>
@@ -127,8 +134,15 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
             const placed = Number.isFinite(storedX) && Number.isFinite(storedY);
             const centerX = placed ? storedX : x;
             const centerY = placed ? storedY : y;
-            return <image key={name} href={motifImage(name)} x={centerX - size / 2} y={centerY - size / 2}
-              width={size} height={size} role="img" aria-label={onMotifMove ? `${name}纹样，可拖动或用方向键移动` : `${name}纹样`}
+            const x0 = centerX - size / 2;
+            const y0 = centerY - size / 2;
+            const threadMask = `${id}-thread-${name}`;
+            return <g key={name}>
+              <mask id={threadMask} x={x0} y={y0} width={size} height={size} maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
+                <image href={motifImage(name)} x={x0} y={y0} width={size} height={size}/>
+              </mask>
+              <image href={motifImage(name)} x={x0} y={y0}
+              width={size} height={size} filter={`url(#${id}-thread-relief)`} role="img" aria-label={onMotifMove ? `${name}纹样，可拖动或用方向键移动` : `${name}纹样`}
               tabIndex={onMotifMove ? 0 : undefined}
               style={onMotifMove ? {cursor: 'move', touchAction: 'none'} : undefined}
               onPointerDown={event => {
@@ -145,7 +159,10 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
                 if (point) move(name, point.x + active.dx, point.y + active.dy);
               }}
               onLostPointerCapture={() => {drag.current = null;}}
-              onKeyDown={onMotifMove ? event => nudge(event, name, centerX, centerY) : undefined}/>;
+              onKeyDown={onMotifMove ? event => nudge(event, name, centerX, centerY) : undefined}/>
+              <rect x={x0} y={y0} width={size} height={size} pointerEvents="none"
+                mask={`url(#${threadMask})`} fill={`url(#${id}-stitches)`}/>
+            </g>;
           })}
         </g>
         <g data-layer="accessory" pointerEvents="none">
@@ -168,7 +185,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           {Array.from({length: fasteners}, (_, index) => {
             const y = 130 + index * (fasteners === 7 ? 25 : 37);
             if (stage && form['扣型'] !== '钻扣') {
-              return <image key={index} href={asset('accessories','盘扣')} x="164" y={y - 4} width="32" height="8"/>;
+              return <image key={index} href={asset('accessories','盘扣')} x="168" y={y - 3} width="24" height="6"/>;
             }
             return <g key={index} stroke={trim}>
               <path d={`M166 ${y}q14 -5 28 0q-14 5 -28 0Z`} fill={color} strokeWidth="1.5"/>
@@ -178,7 +195,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           {studs && (!form['钻色'] || form['钻色'] === '白钻') &&
             Array.from({length: 6}, (_, index) =>
               <image key={index} href={asset('accessories','水钻')} x={145 + index % 3 * 25}
-                y={150 + Math.floor(index / 3) * 88} width={form['装饰'] === '满天星宽钻' ? 22 : 17} height="23"/>)}
+                y={150 + Math.floor(index / 3) * 88} width={form['装饰'] === '满天星宽钻' ? 14 : 11} height="15"/>)}
           {studs && ['彩钻','黄钻'].includes(form['钻色']) && Array.from({length: 42}, (_, index) =>
             <circle key={index} cx={145 + index % 7 * 11} cy={156 + Math.floor(index / 7) * 25}
               r={form['装饰'] === '满天星宽钻' ? 1.65 : 1.15} fill={diamondColor(index)}
