@@ -1,36 +1,120 @@
-import {useState} from 'react';
+import {useId, useState} from 'react';
+
 const palette:Record<string,string>={朱砂:'#ab3f38',玄墨:'#282c30',靛青:'#344c78',月白:'#e8eee9',绛紫:'#614663',鎏金:'#b99b56',黛蓝:'#305560',松绿:'#42654e',赭石:'#91624a',缃色:'#dac778',霜灰:'#a8afb2',胭脂:'#b66b7b'};
-type Outfit={line:string;gender:string;style:string;color:string;primary:string;secondary:string[];custom:string;extras:string[]};
-function Motif({name}:{name:string}){const paths:Record<string,string>={
-龙:'M-25 23Q-42 5-20-3T8-12Q28-35 36-20L23-18 29-10 17-8Q32 11 9 19T-12 38M22-23l5-13m-8 16-4-12M-19 2l-12-7m17 29-8 9M-13 6q7 9 15 2m-8 14q7 8 14 0',
-凤:'M0 0Q-25-34-34-10Q-17-17-5 6Q-30 35-29 45Q-12 27 0 13Q2 40 13 46Q16 25 10 10Q39-5 35-25Q15-13 5 1L10-18 19-23 12-27 4-22Z',
-虎:'M-22-15l-4-16 16 7Q0-30 11-24l15-7-4 16Q35 20 0 34Q-35 20-22-15ZM-16-6l10 5m22-5-10 5M-5 10h10l-5 6Zm-12 9q12 12 24 0M-6-18h12m-6-5v13',
-鹤:'M-30 25Q-4 12 4-7T18-23L32-21 18-17Q12-1 7 14M5 7Q-24-16-33-2L-8 18M7 16l-2 28m2-27 17 24',
-鹿:'M-16-18l-7-16m6 11-16-3m16 7 4-14M12-18l12-16m-5 12 14-5M-13-14Q0-24 14-14L8 17 0 28-8 17ZM-11 0l5 2m17-2-5 2',
-鹰:'M0 10Q-12-28-38-23L-22 1-4 20 0 30 4 20 22 1 38-23Q12-28 0 10ZM-1 4l9-12 9 4-9 4M-20-9l13 15m26-15L6 6',
-狮:'M0-32l12 8 16 2 2 17 7 12-12 13-10 12H-15l-10-12-12-13 7-12 2-17 16-2ZM-17-10Q0-25 17-10L12 17 0 25-12 17ZM-12 0l6 2m18-2-6 2M-4 10h8',
-麒麟:'M-22 28Q-10 12-22 1L-10-8 0-5 15-21 27-18 20-8 29 0 14 5 6 22 20 33M15-21l-4-13M-5 13l-5 23M-20 29l-7 6M1-7l-6-10M3 14l8-2',
-火焰:'M0 35Q-34 22-20-7Q-17 8-9 3Q-6-12 8-34Q6-8 20 1Q40 28 0 35ZM0 26Q-12 15 3 0Q4 17 10 22',
-星辰:'M0-32 8-9 32 0 8 9 0 32-8 9-32 0-8-9ZM27-25v12m-6-6h12M-26 20v12m-6-6h12'};return <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={paths[name]||paths['星辰']}/></g>}
-export default function FittingPreview({cfg,form}:{cfg:Outfit;form:Record<string,string>}){const[zoom,setZoom]=useState(false);const female=cfg.gender==='女款',taiji=cfg.style==='太极服',southern=cfg.style==='南拳服',stage=cfg.line==='表演',wide=taiji||['舞台演出','戏曲元素','奇幻造型'].includes(cfg.style);const color=palette[cfg.color]||palette.朱砂;const light=['月白','缃色','霜灰'].includes(cfg.color);const trim=light?'#8d754c':'#e5cf95';const has=(x:string)=>cfg.extras.includes(x);const sleeve=wide?'M131 121L100 133 50 254 91 275 121 214 127 280 173 286 173 135Z':southern?'M132 120L112 135 119 178 139 180 168 138Z':'M132 120L106 134 78 190 109 207 126 180 128 266 174 276 174 136Z';return <aside className="fitting-preview" aria-label="服装实时人物预览"><div className="preview-title"><div><span className="section-label">HUAJIN / LIVE FITTING</span><h3>你的彩服，逐步成形。</h3></div><button onClick={()=>setZoom(!zoom)} aria-pressed={zoom}>{zoom?'查看全身':'查看细节'}</button></div><div className={`avatar-stage ${zoom?'detail-view':''}`}><svg viewBox="0 0 360 530" role="img" aria-label={`${cfg.gender}，${cfg.style}，${cfg.color}，${cfg.primary||'无主纹样'}，${cfg.extras.join('、')||'无附加模块'}`}><defs><linearGradient id="cloth" x1="0" y1="0" x2="1" y2=".2"><stop stopColor={color}/><stop offset=".45" stopColor={color}/><stop offset="1" stopColor={color}/></linearGradient><linearGradient id="fold"><stop stopColor="white" stopOpacity=".22"/><stop offset=".5" stopColor="black" stopOpacity=".07"/><stop offset="1" stopColor="white" stopOpacity=".06"/></linearGradient></defs><ellipse cx="180" cy="505" rx="90" ry="9" fill="#e4e4dd"/><circle cx="180" cy="232" r="160" fill="none" stroke="#e4e2d8" strokeWidth=".7"/><path d="M20 330h320M180 20v490" stroke="#eeeee8" strokeDasharray="3 7"/>
-<g className="avatar-figure">
-{stage&&has('亮片披风')&&<path d="M127 125Q67 200 44 443Q180 475 316 443Q293 200 233 125Z" fill={color} stroke={trim} strokeWidth="2" opacity=".85"/>}
-<path d="M126 270L119 356 125 481 163 481 181 345 198 481 235 481 241 356 232 270Z" fill={color} stroke="#0003"/><path d="M130 300L139 458M230 300L222 458M180 309v35" stroke={trim} strokeOpacity=".35" fill="none"/><path d="M126 275L130 472 156 476 181 345 203 476 229 472 234 275Z" fill="url(#fold)"/>
-<path d="M125 477l-9 19q20 12 49-1l-2-18ZM198 477l-1 18q29 13 49 1l-11-19Z" fill="#f0eee6" stroke="#777"/><path d="M117 497q22 10 48-1M197 496q25 11 48 1" stroke="#999" fill="none"/>
-<path d="M147 82L147 116 130 125 178 148 230 125 213 116 213 82Z" fill="#dfbda5"/>
-{female&&<ellipse cx="180" cy="38" rx="23" ry="17" fill="#2e2c2b"/>}<path d="M146 53Q145 27 180 28Q216 28 214 58L210 82Q202 106 180 108Q157 104 150 82Z" fill="#efd1ba" stroke="#cfaa91"/><path d="M146 66Q137 23 179 25Q219 23 214 69L203 46Q175 64 155 48L153 69Z" fill="#302d2b"/>
-<path d="M157 73q6-4 13 0m20 0q6-4 13 0" fill="none" stroke="#5b4740" strokeWidth="1.4"/><path d="M177 75l-2 10 7 1m-10 8q8 4 16 0" fill="none" stroke="#b78a75"/>
-<path d={wide?'M62 257l-5 22q2 12 11 12l11-21ZM298 257l5 22q-2 12-11 12l-11-21Z':southern?'M115 174L96 249 89 279q2 15 12 13l12-28 30-84ZM245 174l19 75 7 30q-2 15-12 13l-12-28-30-84Z':'M83 188l-22 68-6 23q2 15 12 12l13-23 31-65ZM277 188l22 68 6 23q-2 15-12 12l-13-23-31-65Z'} fill="#e7c5ad" stroke="#cfaa91"/>
-<path d={sleeve} fill="url(#cloth)" stroke="#0003"/><path d={sleeve} transform="translate(360 0) scale(-1 1)" fill="url(#cloth)" stroke="#0003"/>
-<path d={female?'M132 121L163 111 180 127 197 111 228 121 218 189 224 232 236 300Q180 315 124 300L136 232 142 189Z':'M126 122L162 111 180 127 198 111 234 122 227 211 238 298Q180 310 122 298L133 211Z'} fill={color} stroke="#0003"/><path d="M145 143L149 212 137 289M214 143l-5 69 12 77" stroke="white" opacity=".15" fill="none"/><path d="M134 144L151 213 139 296 180 303 217 296 205 213 226 144Z" fill="url(#fold)"/>
-<path d="M163 111v-10l17 8 17-8v10l-17 16Z" fill={color} stroke={trim} strokeWidth="1.2"/><path d="M180 127v175M125 299q55 15 110 0" stroke={trim} strokeWidth="1.4" fill="none"/>
-{Array.from({length:form['扣位']==='7 扣'?7:3},(_,i)=><g key={i} stroke={trim} fill={trim}><path d={`M175 ${139+i*(form['扣位']==='7 扣'?13:29)}h15`} strokeWidth="2"/><circle cx="183" cy={139+i*(form['扣位']==='7 扣'?13:29)} r="2"/></g>)}
-{cfg.primary&&<g transform="translate(210 176) scale(.56)" color={trim}><Motif name={cfg.primary}/></g>}
-{cfg.secondary.map((s,i)=><g key={s} transform={`translate(${145+i*31} ${265+(i%2)*10})`} stroke={trim} fill="none" strokeWidth="1"><path d={s==='云纹'?'M-8 0q-10-12 1-14 8-9 15 1 10 2 3 10H-4':s==='水纹'?'M-10-5q5-6 10 0t10 0m-20 6q5-6 10 0t10 0':s==='竹'||s==='松'?'M0 9v-26m0 6-10-6m10 13 9-7m-9 0-9-5':'M0 9V-4m0 0q-15-3-9-11 8-5 9 8 2-14 10-8 6 9-10 11'}/></g>)}
-{has('云肩绣片')&&<path d="M132 122l27-6 21 18 21-18 27 6 13 26-25 12-17-11-19 11-19-11-17 11-25-12Z" fill={trim} fillOpacity=".7" stroke={trim}/>}
-{has('龙凤胸片')&&<g><path d="M146 153q34-14 68 0v46q-34 18-68 0Z" fill={trim} fillOpacity=".18" stroke={trim}/><g transform="translate(180 178) scale(.45)" color={trim}><Motif name="凤"/></g></g>}
-{(has('织锦腰封')||has('流苏腰饰'))&&<path d="M134 222q46 13 92 0l3 24q-49 12-98 0Z" fill={trim} stroke={color}/>}
-{has('流苏腰饰')&&Array.from({length:9},(_,i)=><path key={i} d={`M${140+i*10} 246v${24+(i%3)*6}`} stroke={trim} strokeWidth="2"/>)}
-{has('织锦头饰')&&<g stroke={trim} fill={trim}><path d="M152 49q28-32 56 0l-4-15-12 4-12-13-12 13-12-4Z"/><circle cx="180" cy="25" r="4"/></g>}
-{stage&&form['装饰']&&form['装饰']!=='不做'&&Array.from({length:21},(_,i)=><circle key={i} cx={143+(i%7)*12} cy={160+Math.floor(i/7)*34} r="1.5" fill={form['钻色']==='黄钻'?'#efcf68':form['钻色']==='彩钻'?['#b1d8d6','#d8aabc','#e7d69b'][i%3]:'white'}/>)}
-</g></svg></div><div className="preview-caption"><strong>{cfg.color} · {cfg.style} · {cfg.gender}</strong><span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(x=>x!=='档期加急')].filter(Boolean).join(' / ')||'选择纹样与模块，查看搭配效果'}</span>{cfg.custom&&<small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}<small>实时结构与配色示意，非 AI 生成照片；纹样为概念线稿，实际面料、刺绣与尺寸以打样确认为准。</small></div></aside>}
+
+type Outfit = {
+  line: string; gender: string; style: string; color: string;
+  primary: string; secondary: string[]; custom: string; extras: string[];
+};
+
+const asset = (folder: 'textures' | 'motifs', name: string) =>
+  `./assets/preview/${folder}/${encodeURIComponent(name)}.png`;
+
+export default function FittingPreview({cfg, form, onMaterialChange}: {
+  cfg: Outfit;
+  form: Record<string, string>;
+  onMaterialChange?: (material: string) => void;
+}) {
+  const [zoom, setZoom] = useState(false);
+  const id = useId();
+  const material = form['面料'] === '棉麻' ? '棉麻' : '真丝';
+  const stage = cfg.line === '表演';
+  const southern = cfg.style === '南拳服';
+  const wide = cfg.style === '太极服' || ['舞台演出','戏曲元素','奇幻造型'].includes(cfg.style);
+  const color = palette[cfg.color] || palette.朱砂;
+  const trim = ['月白','缃色','霜灰'].includes(cfg.color) ? '#856c41' : '#ebd29c';
+  const has = (module: string) => cfg.extras.includes(module);
+
+  const body = cfg.gender === '女款'
+    ? 'M130 119L162 106 180 120 198 106 230 119 217 201 224 243 235 305Q180 321 125 305L136 243 143 201Z'
+    : 'M126 119L162 106 180 120 198 106 234 119 227 213 238 305Q180 319 122 305L133 213Z';
+  const sleeve = wide ? 'M137 116L103 128 48 236 88 255 129 186 149 155Z'
+    : southern ? 'M137 116L107 129 111 156 134 170 149 149Z'
+    : 'M137 116L105 128 73 183 108 203 132 168 149 147Z';
+  const cuff = wide ? 'M51 230l40 19-3 6-40-19Z'
+    : southern ? 'M110 150l25 14-1 6-23-14Z'
+    : 'M76 178l35 19-3 6-35-20Z';
+  const collar = 'M162 106V94Q173 94 180 103Q187 94 198 94V106L180 121Z';
+  const trousers = 'M126 280L117 359 124 480 165 480 180 354 195 480 236 480 243 359 234 280Z';
+  const mirror = 'translate(360 0) scale(-1 1)';
+  const cape = 'M128 120Q68 191 45 417Q180 452 315 417Q292 191 232 120Z';
+  const belt = 'M137 224Q180 236 223 224L228 244Q180 256 132 244Z';
+  const hasCape = stage && has('亮片披风');
+  const studs = stage && ['满天星宽钻','满天星窄钻'].includes(form['装饰']);
+  const diamondColor = (index: number) => form['钻色'] === '黄钻' ? '#f0d273'
+    : form['钻色'] === '彩钻' ? ['#acd9d8','#e5b6d7','#efd498'][index % 3] : '#fff';
+  const fasteners = cfg.style === '长拳服' && cfg.gender === '女款' && form['扣位'] === '7 扣' ? 7 : 3;
+
+  return <aside className="fitting-preview" aria-label="服装分层预览">
+    <div className="preview-title">
+      <div><span className="section-label">HUAJIN / DESIGN PREVIEW</span><h3>彩服设计预览</h3></div>
+      <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看全套' : '查看细节'}</button>
+    </div>
+    <div className="avatar-stage layered-stage" style={{background: '#fff'}}>
+      <svg viewBox={zoom ? '34 80 292 246' : '22 59 316 447'} role="img"
+        aria-label={`${cfg.gender}、${cfg.style}、${material}、${cfg.color}的平面设计稿`}>
+        <defs>
+          <clipPath id={`${id}-garment`}>
+            {hasCape && <path d={cape}/>}
+            <path d={trousers}/><path d={sleeve}/><path d={sleeve} transform={mirror}/>
+            <path d={body}/><path d={collar}/>
+          </clipPath>
+          <clipPath id={`${id}-body`}><path d={body}/></clipPath>
+        </defs>
+        <g data-layer="garment" style={{isolation: 'isolate'}}>
+          <rect x="35" y="85" width="290" height="405" fill="#fff" clipPath={`url(#${id}-garment)`}/>
+          <image data-layer="material" href={asset('textures', material)}
+            x="35" y="85" width="290" height="405" preserveAspectRatio="none" clipPath={`url(#${id}-garment)`}/>
+          <rect data-layer="color" x="35" y="85" width="290" height="405" fill={color}
+            clipPath={`url(#${id}-garment)`} style={{mixBlendMode: 'multiply'}}/>
+          <g fill="none" stroke="#342f2b" strokeOpacity=".6" strokeWidth="1.25" strokeLinejoin="round">
+            {hasCape && <path d={cape} stroke={trim}/>}
+            <path d="M125 308L117 359 124 480 165 480 180 354 195 480 236 480 243 359 235 308"/>
+            <path d={sleeve}/><path d={sleeve} transform={mirror}/><path d={body}/><path d={collar}/>
+            <path d="M180 121v191M132 332l5 132m91-132-5 132"/>
+          </g>
+        </g>
+        <g data-layer="motif" clipPath={`url(#${id}-body)`}>
+          {cfg.primary && <image href={asset('motifs', cfg.primary)} x="148" y="142" width="64" height="64"/>}
+          {cfg.secondary.map((name, index) =>
+            <image key={name} href={asset('motifs', name)} x={128 + index * 33} y={263 + index % 2 * 8} width="36" height="36"/>)}
+        </g>
+        <g data-layer="accessory">
+          <path d={cuff} fill={trim}/><path d={cuff} transform={mirror} fill={trim}/>
+          <path d="M162 95q12 1 18 8 6-7 18-8M126 304q54 15 108 0" fill="none" stroke={trim} strokeWidth="1.8"/>
+          {has('云肩绣片') && <path d="M132 121l28-8 20 16 20-16 28 8 12 19-24 14-16-10-20 10-20-10-16 10-24-14Z" fill={trim} fillOpacity=".65" stroke={trim}/>}
+          {has('龙凤胸片') && <g>
+            <path d="M149 151q31-14 62 0v56q-31 12-62 0Z" fill={color} stroke={trim}/>
+            <image href={asset('motifs','龙')} x="150" y="162" width="30" height="34"/>
+            <image href={asset('motifs','凤')} x="180" y="162" width="30" height="34"/>
+          </g>}
+          {(has('织锦腰封') || has('流苏腰饰')) && <path d={belt} fill={trim} stroke={color}/>}
+          {has('流苏腰饰') && Array.from({length: 9}, (_, index) =>
+            <path key={index} d={`M${139 + index * 10} 245v${18 + (index % 3) * 4}`} stroke={trim} strokeWidth="2"/>)}
+          {has('织锦头饰') && <path d="M152 82q28-34 56 0l-3-14-13 4-12-12-12 12-13-4Z" fill={trim} stroke={color}/>}
+          {Array.from({length: fasteners}, (_, index) => {
+            const y = 130 + index * (fasteners === 7 ? 25 : 37);
+            return <g key={index} stroke={trim}>
+              <path d={`M166 ${y}q14 -5 28 0q-14 5 -28 0Z`} fill={color} strokeWidth="1.5"/>
+              <circle cx="180" cy={y} r="2.8" fill={stage && form['扣型'] === '钻扣' ? diamondColor(index) : trim}/>
+            </g>;
+          })}
+          {studs && Array.from({length: 42}, (_, index) =>
+            <circle key={index} cx={145 + index % 7 * 11} cy={156 + Math.floor(index / 7) * 25}
+              r={form['装饰'] === '满天星宽钻' ? 1.65 : 1.15} fill={diamondColor(index)}
+              stroke="#73695a" strokeWidth=".3"/>)}
+        </g>
+      </svg>
+    </div>
+    <div className="preview-caption">
+      {onMaterialChange && <div role="group" aria-label="选择面料" className="choices">
+        {['真丝','棉麻'].map(name => <button key={name} type="button" aria-pressed={material === name}
+          onClick={() => onMaterialChange(name)}>{name}</button>)}
+      </div>}
+      <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
+      <span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(name => name !== '档期加急')].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
+      {cfg.custom && <small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}
+      <small>平面设计示意，实际面料、刺绣与尺寸以打样确认为准。</small>
+    </div>
+  </aside>;
+}
