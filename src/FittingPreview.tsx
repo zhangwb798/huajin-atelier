@@ -10,14 +10,15 @@ type Outfit = {
 const asset = (folder: 'textures' | 'motifs', name: string) =>
   `./assets/preview/${folder}/${encodeURIComponent(name)}.png`;
 
-export default function FittingPreview({cfg, form, onMaterialChange}: {
+export const materials = ['真丝', '仿丝', '棉麻'];
+
+export default function FittingPreview({cfg, form}: {
   cfg: Outfit;
   form: Record<string, string>;
-  onMaterialChange?: (material: string) => void;
 }) {
   const [zoom, setZoom] = useState(false);
   const id = useId();
-  const material = form['面料'] === '棉麻' ? '棉麻' : '真丝';
+  const material = materials.includes(form['面料']) ? form['面料'] : materials[0];
   const stage = cfg.line === '表演';
   const southern = cfg.style === '南拳服';
   const wide = cfg.style === '太极服' || ['舞台演出','戏曲元素','奇幻造型'].includes(cfg.style);
@@ -35,9 +36,8 @@ export default function FittingPreview({cfg, form, onMaterialChange}: {
     : southern ? 'M110 150l25 14-1 6-23-14Z'
     : 'M76 178l35 19-3 6-35-20Z';
   const collar = 'M162 106V94Q173 94 180 103Q187 94 198 94V106L180 121Z';
-  const trousers = 'M126 280L117 359 124 480 165 480 180 354 195 480 236 480 243 359 234 280Z';
   const mirror = 'translate(360 0) scale(-1 1)';
-  const cape = 'M128 120Q68 191 45 417Q180 452 315 417Q292 191 232 120Z';
+  const cape = 'M128 120Q68 191 48 299Q180 331 312 299Q292 191 232 120Z';
   const belt = 'M137 224Q180 236 223 224L228 244Q180 256 132 244Z';
   const hasCape = stage && has('亮片披风');
   const studs = stage && ['满天星宽钻','满天星窄钻'].includes(form['装饰']);
@@ -48,30 +48,29 @@ export default function FittingPreview({cfg, form, onMaterialChange}: {
   return <aside className="fitting-preview" aria-label="服装分层预览">
     <div className="preview-title">
       <div><span className="section-label">HUAJIN / DESIGN PREVIEW</span><h3>彩服设计预览</h3></div>
-      <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看全套' : '查看细节'}</button>
+      <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看上衣' : '查看细节'}</button>
     </div>
     <div className="avatar-stage layered-stage" style={{background: '#fff'}}>
-      <svg viewBox={zoom ? '34 80 292 246' : '22 59 316 447'} role="img"
+      <svg viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
         aria-label={`${cfg.gender}、${cfg.style}、${material}、${cfg.color}的平面设计稿`}>
         <defs>
           <clipPath id={`${id}-garment`}>
             {hasCape && <path d={cape}/>}
-            <path d={trousers}/><path d={sleeve}/><path d={sleeve} transform={mirror}/>
+            <path d={sleeve}/><path d={sleeve} transform={mirror}/>
             <path d={body}/><path d={collar}/>
           </clipPath>
           <clipPath id={`${id}-body`}><path d={body}/></clipPath>
         </defs>
         <g data-layer="garment" style={{isolation: 'isolate'}}>
-          <rect x="35" y="85" width="290" height="405" fill="#fff" clipPath={`url(#${id}-garment)`}/>
+          <rect x="35" y="85" width="290" height="245" fill="#fff" clipPath={`url(#${id}-garment)`}/>
           <image data-layer="material" href={asset('textures', material)}
-            x="35" y="85" width="290" height="405" preserveAspectRatio="none" clipPath={`url(#${id}-garment)`}/>
-          <rect data-layer="color" x="35" y="85" width="290" height="405" fill={color}
+            x="35" y="85" width="290" height="245" preserveAspectRatio="none" clipPath={`url(#${id}-garment)`}/>
+          <rect data-layer="color" x="35" y="85" width="290" height="245" fill={color}
             clipPath={`url(#${id}-garment)`} style={{mixBlendMode: 'multiply'}}/>
           <g fill="none" stroke="#342f2b" strokeOpacity=".6" strokeWidth="1.25" strokeLinejoin="round">
             {hasCape && <path d={cape} stroke={trim}/>}
-            <path d="M125 308L117 359 124 480 165 480 180 354 195 480 236 480 243 359 235 308"/>
             <path d={sleeve}/><path d={sleeve} transform={mirror}/><path d={body}/><path d={collar}/>
-            <path d="M180 121v191M132 332l5 132m91-132-5 132"/>
+            <path d="M180 121v191"/>
           </g>
         </g>
         <g data-layer="motif" clipPath={`url(#${id}-body)`}>
@@ -107,10 +106,7 @@ export default function FittingPreview({cfg, form, onMaterialChange}: {
       </svg>
     </div>
     <div className="preview-caption">
-      {onMaterialChange && <div role="group" aria-label="选择面料" className="choices">
-        {['真丝','棉麻'].map(name => <button key={name} type="button" aria-pressed={material === name}
-          onClick={() => onMaterialChange(name)}>{name}</button>)}
-      </div>}
+
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
       <span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(name => name !== '档期加急')].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
       {cfg.custom && <small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}
