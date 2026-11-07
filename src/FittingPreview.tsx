@@ -7,7 +7,7 @@ type Outfit = {
   primary: string; secondary: string[]; custom: string; extras: string[];
 };
 
-const asset = (folder: 'textures' | 'motifs' | 'accessories', name: string) =>
+const asset = (folder: 'motifs' | 'accessories', name: string) =>
   `./assets/preview/${folder}/${encodeURIComponent(name)}.png`;
 
 export const motifImage = (name: string) => asset('motifs', name);
@@ -21,7 +21,6 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   onMotifMove?: (name: string, position: string) => void;
 }) {
   const [zoom, setZoom] = useState(false);
-  const [view, setView] = useState<'sample' | 'layers' | null>(null);
   const id = useId();
   const drag = useRef<{pointer: number; dx: number; dy: number} | null>(null);
   const motifs = [
@@ -29,7 +28,6 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
     ...cfg.secondary.map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 24})),
   ];
 
-  const showSample = view === 'sample' || (view === null && motifs.length === 0);
   const colorIndex = Math.max(0, Object.keys(palette).indexOf(cfg.color));
   const sampleX = 45 + (colorIndex % 4) * 338;
   const sampleY = [0, 361, 720][Math.floor(colorIndex / 4)];
@@ -56,8 +54,6 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   }
   const material = materials.includes(form['面料']) ? form['面料'] : materials[0];
   const stage = cfg.line === '表演';
-  const southern = cfg.style === '南拳服';
-  const wide = cfg.style === '太极服' || ['舞台演出','戏曲元素','奇幻造型'].includes(cfg.style);
   const color = palette[cfg.color] || palette.朱砂;
   const trim = ['月白','缃色','霜灰'].includes(cfg.color) ? '#856c41' : '#ebd29c';
   const has = (module: string) => cfg.extras.includes(module);
@@ -65,16 +61,8 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const body = cfg.gender === '女款'
     ? 'M130 119L162 106 180 120 198 106 230 119 217 201 224 243 235 305Q180 321 125 305L136 243 143 201Z'
     : 'M126 119L162 106 180 120 198 106 234 119 227 213 238 305Q180 319 122 305L133 213Z';
-  const sleeve = wide ? 'M137 116L103 128 48 236 88 255 129 186 149 155Z'
-    : southern ? 'M137 116L107 129 111 156 134 170 149 149Z'
-    : 'M137 116L105 128 73 183 108 203 132 168 149 147Z';
-  const cuff = wide ? 'M51 230l40 19-3 6-40-19Z'
-    : southern ? 'M110 150l25 14-1 6-23-14Z'
-    : 'M76 178l35 19-3 6-35-20Z';
-  const cuffPlacement = wide ? 'translate(51 230) rotate(25)'
-    : southern ? 'translate(110 150) rotate(29)' : 'translate(76 178) rotate(29)';
-  const cuffWidth = wide ? 44 : southern ? 28 : 40;
-  const collar = 'M162 106V94Q173 94 180 103Q187 94 198 94V106L180 121Z';
+  const cuffPlacement = cfg.gender === '男款' ? 'translate(48 252) rotate(10)' : 'translate(81 209) rotate(18)';
+  const cuffWidth = cfg.gender === '男款' ? 43 : 32;
   const mirror = 'translate(360 0) scale(-1 1)';
   const cape = 'M128 120Q68 191 48 299Q180 331 312 299Q292 191 232 120Z';
   const belt = 'M137 224Q180 236 223 224L228 244Q180 256 132 244Z';
@@ -82,25 +70,15 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const studs = stage && ['满天星宽钻','满天星窄钻'].includes(form['装饰']);
   const diamondColor = (index: number) => form['钻色'] === '黄钻' ? '#f0d273'
     : form['钻色'] === '彩钻' ? ['#acd9d8','#e5b6d7','#efd498'][index % 3] : '#fff';
-  const fasteners = cfg.style === '长拳服' && cfg.gender === '女款' && form['扣位'] === '7 扣' ? 7 : 3;
 
-  return <aside className="fitting-preview" aria-label="服装分层预览">
+  return <aside className="fitting-preview" aria-label="写实样衣定制预览">
     <div className="preview-title">
       <div><span className="section-label">HUAJIN / DESIGN PREVIEW</span><h3>彩服设计预览</h3></div>
-      {!showSample && <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看上衣' : '查看细节'}</button>}
+      <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看上衣' : '查看细节'}</button>
     </div>
-    <div className="choices" role="group" aria-label="预览方式">
-      <button type="button" aria-pressed={showSample} onClick={() => setView('sample')}>写实样衣</button>
-      <button type="button" aria-pressed={!showSample} onClick={() => setView('layers')}>分层定制</button>
-    </div>
-    <div className="avatar-stage layered-stage" style={{background: '#fff'}}>
-      {showSample ? <svg viewBox={`${sampleX} ${sampleY} 338 320`} role="img"
-        aria-label={`${cfg.gender} ${cfg.color} 写实样衣`} style={{overflow: 'hidden'}}>
-        <defs><clipPath id={`${id}-sample`}><rect x={sampleX} y={sampleY} width="338" height="320"/></clipPath></defs>
-        <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`}/>
-      </svg> :
+    <div className="avatar-stage" style={{background: '#fff'}}>
       <svg viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
-        aria-label={`${cfg.gender}、${cfg.style}、${material}、${cfg.color}的平面设计稿`}>
+        aria-label={`${cfg.gender}、${cfg.style}、${cfg.color}的写实样衣定制预览`}>
         <defs>
           <pattern id={`${id}-stitches`} width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(32)">
             <path d="M0 .5H2.2" stroke="#fff5df" strokeWidth=".38" opacity=".48"/>
@@ -109,25 +87,13 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           <filter id={`${id}-thread-relief`} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
             <feDropShadow dx="0" dy=".42" stdDeviation=".28" floodColor="#322719" floodOpacity=".32"/>
           </filter>
-          <clipPath id={`${id}-garment`}>
-            {hasCape && <path d={cape}/>}
-            <path d={sleeve}/><path d={sleeve} transform={mirror}/>
-            <path d={body}/><path d={collar}/>
-          </clipPath>
+          <clipPath id={`${id}-sample`}><rect x={sampleX} y={sampleY} width="338" height="320"/></clipPath>
           <clipPath id={`${id}-body`}><path d={body}/></clipPath>
         </defs>
-        <g data-layer="garment" style={{isolation: 'isolate'}}>
-          <rect x="35" y="85" width="290" height="245" fill="#fff" clipPath={`url(#${id}-garment)`}/>
-          <image data-layer="material" href={asset('textures', material)}
-            x="35" y="85" width="290" height="245" preserveAspectRatio="none" clipPath={`url(#${id}-garment)`}/>
-          <rect data-layer="color" x="35" y="85" width="290" height="245" fill={color}
-            clipPath={`url(#${id}-garment)`} style={{mixBlendMode: 'multiply'}}/>
-          <g fill="none" stroke="#342f2b" strokeOpacity=".6" strokeWidth="1.25" strokeLinejoin="round">
-            {hasCape && <path d={cape} stroke={trim}/>}
-            <path d={sleeve}/><path d={sleeve} transform={mirror}/><path d={body}/><path d={collar}/>
-            <path d="M180 121v191"/>
-          </g>
-        </g>
+        <svg x="32" y="56" width="296" height="288" viewBox={`${sampleX} ${sampleY} 338 320`} aria-hidden="true">
+          <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`}/>
+        </svg>
+        {hasCape && <path d={cape} fill={color} fillOpacity=".18" stroke={trim} strokeOpacity=".7"/>}
         <g data-layer="motif" clipPath={`url(#${id}-body)`}>
           {motifs.map(({name, x, y, size}) => {
             const [storedX, storedY] = (form[motifPositionKey(name)] || '').split(',').map(Number);
@@ -166,12 +132,10 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           })}
         </g>
         <g data-layer="accessory" pointerEvents="none">
-          <path d={cuff} fill={trim}/><path d={cuff} transform={mirror} fill={trim}/>
           {studs && [undefined, mirror].map((transform, index) =>
             <g key={index} transform={transform}>
               <image href={asset('accessories','袖口')} transform={cuffPlacement} width={cuffWidth} height="7" preserveAspectRatio="none"/>
             </g>)}
-          <path d="M162 95q12 1 18 8 6-7 18-8M126 304q54 15 108 0" fill="none" stroke={trim} strokeWidth="1.8"/>
           {has('云肩绣片') && <path d="M132 121l28-8 20 16 20-16 28 8 12 19-24 14-16-10-20 10-20-10-16 10-24-14Z" fill={trim} fillOpacity=".65" stroke={trim}/>}
           {has('龙凤胸片') && <g>
             <path d="M149 151q31-14 62 0v56q-31 12-62 0Z" fill={color} stroke={trim}/>
@@ -182,16 +146,9 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           {has('流苏腰饰') && Array.from({length: 9}, (_, index) =>
             <path key={index} d={`M${139 + index * 10} 245v${18 + (index % 3) * 4}`} stroke={trim} strokeWidth="2"/>)}
           {has('织锦头饰') && <path d="M152 82q28-34 56 0l-3-14-13 4-12-12-12 12-13-4Z" fill={trim} stroke={color}/>}
-          {Array.from({length: fasteners}, (_, index) => {
-            const y = 130 + index * (fasteners === 7 ? 25 : 37);
-            if (stage && form['扣型'] !== '钻扣') {
-              return <image key={index} href={asset('accessories','盘扣')} x="168" y={y - 3} width="24" height="6"/>;
-            }
-            return <g key={index} stroke={trim}>
-              <path d={`M166 ${y}q14 -5 28 0q-14 5 -28 0Z`} fill={color} strokeWidth="1.5"/>
-              <circle cx="180" cy={y} r="2.8" fill={stage && form['扣型'] === '钻扣' ? diamondColor(index) : trim}/>
-            </g>;
-          })}
+          {stage && form['扣型'] === '钻扣' &&
+            (cfg.gender === '男款' ? [104,139,171,207,243,275] : [94,122,148,175,201,227,254]).map((y, index) =>
+              <circle key={y} cx="183" cy={y} r="2.4" fill={diamondColor(index)} stroke={trim} strokeWidth=".6"/>)}
           {studs && (!form['钻色'] || form['钻色'] === '白钻') &&
             Array.from({length: 6}, (_, index) =>
               <image key={index} href={asset('accessories','水钻')} x={145 + index % 3 * 25}
@@ -201,15 +158,15 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
               r={form['装饰'] === '满天星宽钻' ? 1.65 : 1.15} fill={diamondColor(index)}
               stroke="#73695a" strokeWidth=".3"/>)}
         </g>
-      </svg>}
+      </svg>
     </div>
     <div className="preview-caption">
-      {!showSample && onMotifMove && <small>{motifs.length ? '拖动衣身上的纹样调整位置，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
+      {onMotifMove && <small>{motifs.length ? '拖动衣身上的纹样调整位置，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
       <span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(name => name !== '档期加急')].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
       {cfg.custom && <small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}
-      <small>{showSample ? '写实样衣用于参考颜色和男女版型。面料、纹样和配饰可在分层定制中查看。' : '平面设计示意，实际面料、刺绣与尺寸以打样确认为准。'}</small>
+      <small>写实样衣展示配色和装饰位置。面料、扣数和具体版式以配置单及打样为准。</small>
     </div>
   </aside>;
 }
