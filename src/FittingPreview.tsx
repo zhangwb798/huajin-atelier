@@ -21,12 +21,19 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   onMotifMove?: (name: string, position: string) => void;
 }) {
   const [zoom, setZoom] = useState(false);
+  const [view, setView] = useState<'sample' | 'layers' | null>(null);
   const id = useId();
   const drag = useRef<{pointer: number; dx: number; dy: number} | null>(null);
   const motifs = [
     ...(cfg.primary ? [{name: cfg.primary, x: 180, y: 174, size: 64}] : []),
     ...cfg.secondary.map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 36})),
   ];
+
+  const showSample = view === 'sample' || (view === null && motifs.length === 0);
+  const colorIndex = Math.max(0, Object.keys(palette).indexOf(cfg.color));
+  const sampleX = 45 + (colorIndex % 4) * 338;
+  const sampleY = [0, 361, 720][Math.floor(colorIndex / 4)];
+  const sampleSheet = cfg.gender === '男款' ? 'male' : 'female';
 
   function move(name: string, x: number, y: number) {
     const left = Math.round(Math.min(214, Math.max(146, x)));
@@ -80,9 +87,18 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   return <aside className="fitting-preview" aria-label="服装分层预览">
     <div className="preview-title">
       <div><span className="section-label">HUAJIN / DESIGN PREVIEW</span><h3>彩服设计预览</h3></div>
-      <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看上衣' : '查看细节'}</button>
+      {!showSample && <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看上衣' : '查看细节'}</button>}
+    </div>
+    <div className="choices" role="group" aria-label="预览方式">
+      <button type="button" aria-pressed={showSample} onClick={() => setView('sample')}>写实样衣</button>
+      <button type="button" aria-pressed={!showSample} onClick={() => setView('layers')}>分层定制</button>
     </div>
     <div className="avatar-stage layered-stage" style={{background: '#fff'}}>
+      {showSample ? <svg viewBox={`${sampleX} ${sampleY} 338 320`} role="img"
+        aria-label={`${cfg.gender} ${cfg.color} 写实样衣`} style={{overflow: 'hidden'}}>
+        <defs><clipPath id={`${id}-sample`}><rect x={sampleX} y={sampleY} width="338" height="320"/></clipPath></defs>
+        <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`}/>
+      </svg> :
       <svg viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
         aria-label={`${cfg.gender}、${cfg.style}、${material}、${cfg.color}的平面设计稿`}>
         <defs>
@@ -168,15 +184,15 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
               r={form['装饰'] === '满天星宽钻' ? 1.65 : 1.15} fill={diamondColor(index)}
               stroke="#73695a" strokeWidth=".3"/>)}
         </g>
-      </svg>
+      </svg>}
     </div>
     <div className="preview-caption">
-      {onMotifMove && <small>{motifs.length ? '拖动衣身上的纹样调整位置，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
+      {!showSample && onMotifMove && <small>{motifs.length ? '拖动衣身上的纹样调整位置，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
       <span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(name => name !== '档期加急')].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
       {cfg.custom && <small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}
-      <small>平面设计示意，实际面料、刺绣与尺寸以打样确认为准。</small>
+      <small>{showSample ? '写实样衣用于参考颜色和男女版型。面料、纹样和配饰可在分层定制中查看。' : '平面设计示意，实际面料、刺绣与尺寸以打样确认为准。'}</small>
     </div>
   </aside>;
 }
