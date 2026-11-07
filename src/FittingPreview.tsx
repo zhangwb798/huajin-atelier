@@ -1,4 +1,4 @@
-import {useId, useState} from 'react';
+import {useId, useRef, useState, type KeyboardEvent, type PointerEvent} from 'react';
 
 const palette:Record<string,string>={朱砂:'#ab3f38',玄墨:'#282c30',靛青:'#344c78',月白:'#e8eee9',绛紫:'#614663',鎏金:'#b99b56',黛蓝:'#305560',松绿:'#42654e',赭石:'#91624a',缃色:'#dac778',霜灰:'#a8afb2',胭脂:'#b66b7b'};
 
@@ -10,14 +10,43 @@ type Outfit = {
 const asset = (folder: 'textures' | 'motifs', name: string) =>
   `./assets/preview/${folder}/${encodeURIComponent(name)}.png`;
 
+export const motifImage = (name: string) => asset('motifs', name);
+export const motifPositionKey = (name: string) => `纹样位置 · ${name}`;
+
 export const materials = ['真丝', '仿丝', '棉麻'];
 
-export default function FittingPreview({cfg, form}: {
+export default function FittingPreview({cfg, form, onMotifMove}: {
   cfg: Outfit;
   form: Record<string, string>;
+  onMotifMove?: (name: string, position: string) => void;
 }) {
   const [zoom, setZoom] = useState(false);
   const id = useId();
+  const drag = useRef<{pointer: number; dx: number; dy: number} | null>(null);
+  const motifs = [
+    ...(cfg.primary ? [{name: cfg.primary, x: 180, y: 174, size: 64}] : []),
+    ...cfg.secondary.map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 36})),
+  ];
+
+  function move(name: string, x: number, y: number) {
+    const left = Math.round(Math.min(214, Math.max(146, x)));
+    const top = Math.round(Math.min(291, Math.max(138, y)));
+    onMotifMove?.(name, `${left}, ${top}`);
+  }
+
+  function pointerPosition(event: PointerEvent<SVGImageElement>) {
+    const matrix = event.currentTarget.ownerSVGElement?.getScreenCTM();
+    return matrix && new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+  }
+
+  function nudge(event: KeyboardEvent<SVGImageElement>, name: string, x: number, y: number) {
+    const step = event.shiftKey ? 10 : 2;
+    const offsets: Record<string, [number, number]> = {ArrowUp: [0, -step], ArrowDown: [0, step], ArrowLeft: [-step, 0], ArrowRight: [step, 0]};
+    const offset = offsets[event.key];
+    if (!offset) return;
+    event.preventDefault();
+    move(name, x + offset[0], y + offset[1]);
+  }
   const material = materials.includes(form['面料']) ? form['面料'] : materials[0];
   const stage = cfg.line === '表演';
   const southern = cfg.style === '南拳服';
@@ -74,11 +103,33 @@ export default function FittingPreview({cfg, form}: {
           </g>
         </g>
         <g data-layer="motif" clipPath={`url(#${id}-body)`}>
-          {cfg.primary && <image href={asset('motifs', cfg.primary)} x="148" y="142" width="64" height="64"/>}
-          {cfg.secondary.map((name, index) =>
-            <image key={name} href={asset('motifs', name)} x={128 + index * 33} y={263 + index % 2 * 8} width="36" height="36"/>)}
+          {motifs.map(({name, x, y, size}) => {
+            const [storedX, storedY] = (form[motifPositionKey(name)] || '').split(',').map(Number);
+            const placed = Number.isFinite(storedX) && Number.isFinite(storedY);
+            const centerX = placed ? storedX : x;
+            const centerY = placed ? storedY : y;
+            return <image key={name} href={motifImage(name)} x={centerX - size / 2} y={centerY - size / 2}
+              width={size} height={size} role="img" aria-label={onMotifMove ? `${name}纹样，可拖动或用方向键移动` : `${name}纹样`}
+              tabIndex={onMotifMove ? 0 : undefined}
+              style={onMotifMove ? {cursor: 'move', touchAction: 'none'} : undefined}
+              onPointerDown={event => {
+                if (!onMotifMove || !event.isPrimary || event.button !== 0) return;
+                const point = pointerPosition(event);
+                if (!point) return;
+                event.currentTarget.setPointerCapture(event.pointerId);
+                drag.current = {pointer: event.pointerId, dx: centerX - point.x, dy: centerY - point.y};
+              }}
+              onPointerMove={event => {
+                const active = drag.current;
+                if (!active || active.pointer !== event.pointerId) return;
+                const point = pointerPosition(event);
+                if (point) move(name, point.x + active.dx, point.y + active.dy);
+              }}
+              onLostPointerCapture={() => {drag.current = null;}}
+              onKeyDown={onMotifMove ? event => nudge(event, name, centerX, centerY) : undefined}/>;
+          })}
         </g>
-        <g data-layer="accessory">
+        <g data-layer="accessory" pointerEvents="none">
           <path d={cuff} fill={trim}/><path d={cuff} transform={mirror} fill={trim}/>
           <path d="M162 95q12 1 18 8 6-7 18-8M126 304q54 15 108 0" fill="none" stroke={trim} strokeWidth="1.8"/>
           {has('云肩绣片') && <path d="M132 121l28-8 20 16 20-16 28 8 12 19-24 14-16-10-20 10-20-10-16 10-24-14Z" fill={trim} fillOpacity=".65" stroke={trim}/>}
@@ -106,6 +157,7 @@ export default function FittingPreview({cfg, form}: {
       </svg>
     </div>
     <div className="preview-caption">
+      {onMotifMove && <small>{motifs.length ? '拖动衣身上的纹样调整位置，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
       <span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(name => name !== '档期加急')].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
