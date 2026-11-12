@@ -124,7 +124,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const stage = cfg.line === '表演';
   const color = palette[cfg.color] || palette.朱砂;
   const trim = ['月白','缃色','霜灰'].includes(cfg.color) ? '#856c41' : '#ebd29c';
-  const has = (module: string) => cfg.extras.includes(module);
+  const has = (module: string) => stage && cfg.extras.includes(module);
 
   const cuffPlacement = cfg.gender === '男款' ? 'translate(48 252) rotate(10)' : 'translate(81 209) rotate(18)';
   const cuffWidth = cfg.gender === '男款' ? 43 : 32;
@@ -232,13 +232,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
             <g key={index} transform={transform}>
               <image href={asset('accessories','袖口')} transform={cuffPlacement} width={cuffWidth} height="7" preserveAspectRatio="none"/>
             </g>)}
-          {has('云肩绣片') && <path d="M132 121l28-8 20 16 20-16 28 8 12 19-24 14-16-10-20 10-20-10-16 10-24-14Z" fill={trim} fillOpacity=".65" stroke={trim}/>}
-          {has('龙凤胸片') && <g>
-            <path d="M149 151q31-14 62 0v56q-31 12-62 0Z" fill={color} stroke={trim}/>
-            <image href={motifImage('龙')} filter={`url(#${id}-reference)`} x="150" y="162" width="30" height="34"/>
-            <image href={motifImage('凤')} filter={`url(#${id}-reference)`} x="180" y="162" width="30" height="34"/>
-          </g>}
-          {(has('织锦腰封') || has('流苏腰饰')) && <path d={belt} fill={trim} stroke={color}/>}
+          {has('流苏腰饰') && <path d={belt} fill={trim} stroke={color}/>}
           {has('流苏腰饰') && Array.from({length: 9}, (_, index) =>
             <path key={index} d={`M${139 + index * 10} 245v${18 + (index % 3) * 4}`} stroke={trim} strokeWidth="2"/>)}
           {has('织锦头饰') && <path d="M152 82q28-34 56 0l-3-14-13 4-12-12-12 12-13-4Z" fill={trim} stroke={color}/>}
@@ -260,7 +254,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
       {onMotifMove && <small>{motifs.length ? '拖动纹样自由摆放，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
-      <span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(name => name !== '档期加急')].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
+      <span>{[cfg.primary,...cfg.secondary,...(stage ? cfg.extras.filter(name => name !== '档期加急') : [])].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
       {cfg.custom && <small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}
       <small>写实样衣展示配色和装饰位置。面料、扣数与成衣细节以配置单及打样为准。</small>
     </div>
