@@ -10,7 +10,25 @@ type Outfit = {
 const asset = (folder: 'motifs' | 'accessories', name: string) =>
   `./assets/preview/${folder}/${encodeURIComponent(name)}.png`;
 
-export const motifImage = (name: string) => asset('motifs', name);
+const suppliedMotifs = new Set(['龙','凤','虎','鹿','鹤','竹','兰','梅','菊','云纹']);
+export const motifImage = (name: string) => suppliedMotifs.has(name)
+  ? `./assets/preview/references/${encodeURIComponent(name)}.webp` : asset('motifs', name);
+
+function ReferenceFilter({id}: {id: string}) {
+  return <filter id={id} colorInterpolationFilters="sRGB">
+    <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1.0625 -3.577 -0.3605 0 5"/>
+    <feComposite in2="SourceAlpha" operator="in"/>
+  </filter>;
+}
+
+export function MotifThumbnail({name}: {name: string}) {
+  const id = useId();
+  return <svg viewBox="0 0 100 100" width="28" height="28" aria-hidden="true" style={{display:'block',margin:'0 auto 3px'}}>
+    <defs><ReferenceFilter id={id}/></defs>
+    <image href={motifImage(name)} width="100" height="100"
+      filter={suppliedMotifs.has(name) ? `url(#${id})` : undefined}/>
+  </svg>;
+}
 export const motifPositionKey = (name: string) => `纹样位置 · ${name}`;
 
 export const materials = ['真丝', '仿丝', '棉麻'];
@@ -107,6 +125,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
       <svg viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
         aria-label={`${cfg.gender}、${cfg.style}、${cfg.color}的写实样衣定制预览`}>
         <defs>
+          <ReferenceFilter id={`${id}-reference`}/>
           <pattern id={`${id}-satin-stitches`} width="1.25" height="1.25" patternUnits="userSpaceOnUse" patternTransform="rotate(38)">
             <path d="M0 .24H1.05" stroke="#fff6dc" strokeWidth=".32" opacity=".7"/>
             <path d="M0 .74H1.05" stroke="#493421" strokeWidth=".20" opacity=".38"/>
@@ -157,12 +176,13 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
             const x0 = centerX - size / 2;
             const y0 = centerY - size / 2;
             const threadMask = `${id}-thread-${name}`;
-            return <g key={name}>
+            return <g key={name} filter={suppliedMotifs.has(name) ? `url(#${id}-thread-relief)` : undefined}>
               <mask id={threadMask} x={x0} y={y0} width={size} height={size} maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
-                <image href={motifImage(name)} x={x0} y={y0} width={size} height={size}/>
+                <image href={motifImage(name)} x={x0} y={y0} width={size} height={size}
+                  filter={suppliedMotifs.has(name) ? `url(#${id}-reference)` : undefined}/>
               </mask>
               <image href={motifImage(name)} x={x0} y={y0}
-              width={size} height={size} filter={`url(#${id}-${name === cfg.primary ? 'primary-thread' : 'thread-relief'})`} role="img" aria-label={onMotifMove ? `${name}纹样，可拖动或用方向键移动` : `${name}纹样`}
+              width={size} height={size} filter={suppliedMotifs.has(name) ? `url(#${id}-reference)` : `url(#${id}-${name === cfg.primary ? 'primary-thread' : 'thread-relief'})`} role="img" aria-label={onMotifMove ? `${name}纹样，可拖动或用方向键移动` : `${name}纹样`}
               tabIndex={onMotifMove ? 0 : undefined}
               style={onMotifMove ? {cursor: 'move', touchAction: 'none'} : undefined}
               onPointerDown={event => {
@@ -193,8 +213,8 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           {has('云肩绣片') && <path d="M132 121l28-8 20 16 20-16 28 8 12 19-24 14-16-10-20 10-20-10-16 10-24-14Z" fill={trim} fillOpacity=".65" stroke={trim}/>}
           {has('龙凤胸片') && <g>
             <path d="M149 151q31-14 62 0v56q-31 12-62 0Z" fill={color} stroke={trim}/>
-            <image href={asset('motifs','龙')} x="150" y="162" width="30" height="34"/>
-            <image href={asset('motifs','凤')} x="180" y="162" width="30" height="34"/>
+            <image href={motifImage('龙')} filter={`url(#${id}-reference)`} x="150" y="162" width="30" height="34"/>
+            <image href={motifImage('凤')} filter={`url(#${id}-reference)`} x="180" y="162" width="30" height="34"/>
           </g>}
           {(has('织锦腰封') || has('流苏腰饰')) && <path d={belt} fill={trim} stroke={color}/>}
           {has('流苏腰饰') && Array.from({length: 9}, (_, index) =>
