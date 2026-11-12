@@ -32,9 +32,12 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const sampleX = 45 + (colorIndex % 4) * 338;
   const sampleY = [0, 361, 720][Math.floor(colorIndex / 4)];
   const sampleSheet = cfg.gender === '男款' ? 'male' : 'female';
+  const cut = ({'长拳服': 'changquan', '太极服': 'taiji', '南拳服': 'nanquan'} as Record<string, string>)[cfg.style];
+  const cutImage = cut ? `./assets/preview/cuts/${cut}-${sampleSheet}.webp` : '';
+
 
   function move(name: string, x: number, y: number) {
-    const left = Math.round(Math.min(214, Math.max(146, x)));
+    const left = Math.round(Math.min(230, Math.max(130, x)));
     const top = Math.round(Math.min(291, Math.max(138, y)));
     onMotifMove?.(name, `${left}, ${top}`);
   }
@@ -58,7 +61,10 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const trim = ['月白','缃色','霜灰'].includes(cfg.color) ? '#856c41' : '#ebd29c';
   const has = (module: string) => cfg.extras.includes(module);
 
-  const body = cfg.gender === '女款'
+  const body = cut ? (cfg.gender === '女款'
+    ? 'M128 107L156 90H204L232 107L220 203L235 326H125L140 203Z'
+    : 'M112 106L154 89H206L248 106L247 326H113Z')
+    : cfg.gender === '女款'
     ? 'M130 119L162 106 180 120 198 106 230 119 217 201 224 243 235 305Q180 321 125 305L136 243 143 201Z'
     : 'M126 119L162 106 180 120 198 106 234 119 227 213 238 305Q180 319 122 305L133 213Z';
   const cuffPlacement = cfg.gender === '男款' ? 'translate(48 252) rotate(10)' : 'translate(81 209) rotate(18)';
@@ -80,6 +86,19 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
       <svg viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
         aria-label={`${cfg.gender}、${cfg.style}、${cfg.color}的写实样衣定制预览`}>
         <defs>
+          <pattern id={`${id}-satin-stitches`} width="1.25" height="1.25" patternUnits="userSpaceOnUse" patternTransform="rotate(38)">
+            <path d="M0 .24H1.05" stroke="#fff6dc" strokeWidth=".32" opacity=".7"/>
+            <path d="M0 .74H1.05" stroke="#493421" strokeWidth=".20" opacity=".38"/>
+          </pattern>
+          <filter id={`${id}-primary-thread`} x="-8%" y="-8%" width="116%" height="116%" colorInterpolationFilters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="1.2 .25" numOctaves="2" seed="8" result="fiber"/>
+            <feComposite in="fiber" in2="SourceAlpha" operator="in" result="thread"/>
+            <feBlend in="SourceGraphic" in2="thread" mode="soft-light"/>
+            <feDropShadow dx="0" dy=".28" stdDeviation=".16" floodColor="#3b2919" floodOpacity=".35"/>
+          </filter>
+          {cutImage && <mask id={`${id}-cut-alpha`} x="36" y="56" width="288" height="288" maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
+            <image href={cutImage} x="36" y="56" width="288" height="288"/>
+          </mask>}
           <pattern id={`${id}-stitches`} width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(32)">
             <path d="M0 .5H2.2" stroke="#fff5df" strokeWidth=".38" opacity=".48"/>
             <path d="M0 1.4H2.2" stroke="#38291b" strokeWidth=".30" opacity=".32"/>
@@ -90,9 +109,13 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           <clipPath id={`${id}-sample`}><rect x={sampleX} y={sampleY} width="338" height="320"/></clipPath>
           <clipPath id={`${id}-body`}><path d={body}/></clipPath>
         </defs>
-        <svg x="32" y="56" width="296" height="288" viewBox={`${sampleX} ${sampleY} 338 320`} aria-hidden="true">
+        {cutImage ? <g style={{isolation: 'isolate'}}>
+          <image href={cutImage} x="36" y="56" width="288" height="288"/>
+          <rect x="36" y="56" width="288" height="288" fill={color}
+            mask={`url(#${id}-cut-alpha)`} style={{mixBlendMode: 'multiply'}}/>
+        </g> : <svg x="32" y="56" width="296" height="288" viewBox={`${sampleX} ${sampleY} 338 320`} aria-hidden="true">
           <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`}/>
-        </svg>
+        </svg>}
         {hasCape && <path d={cape} fill={color} fillOpacity=".18" stroke={trim} strokeOpacity=".7"/>}
         <g data-layer="motif" clipPath={`url(#${id}-body)`}>
           {motifs.map(({name, x, y, size}) => {
@@ -108,7 +131,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
                 <image href={motifImage(name)} x={x0} y={y0} width={size} height={size}/>
               </mask>
               <image href={motifImage(name)} x={x0} y={y0}
-              width={size} height={size} filter={`url(#${id}-thread-relief)`} role="img" aria-label={onMotifMove ? `${name}纹样，可拖动或用方向键移动` : `${name}纹样`}
+              width={size} height={size} filter={`url(#${id}-${name === cfg.primary ? 'primary-thread' : 'thread-relief'})`} role="img" aria-label={onMotifMove ? `${name}纹样，可拖动或用方向键移动` : `${name}纹样`}
               tabIndex={onMotifMove ? 0 : undefined}
               style={onMotifMove ? {cursor: 'move', touchAction: 'none'} : undefined}
               onPointerDown={event => {
@@ -127,7 +150,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
               onLostPointerCapture={() => {drag.current = null;}}
               onKeyDown={onMotifMove ? event => nudge(event, name, centerX, centerY) : undefined}/>
               <rect x={x0} y={y0} width={size} height={size} pointerEvents="none"
-                mask={`url(#${threadMask})`} fill={`url(#${id}-stitches)`}/>
+                mask={`url(#${threadMask})`} fill={`url(#${id}-${name === cfg.primary ? 'satin-stitches' : 'stitches'})`}/>
             </g>;
           })}
         </g>
@@ -166,7 +189,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
       <span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(name => name !== '档期加急')].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
       {cfg.custom && <small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}
-      <small>写实样衣展示配色和装饰位置。面料、扣数和具体版式以配置单及打样为准。</small>
+      <small>写实样衣展示配色和装饰位置。面料、扣数与成衣细节以配置单及打样为准。</small>
     </div>
   </aside>;
 }
