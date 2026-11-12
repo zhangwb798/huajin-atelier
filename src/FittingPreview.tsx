@@ -10,9 +10,11 @@ type Outfit = {
 const asset = (folder: 'motifs' | 'accessories', name: string) =>
   `./assets/preview/${folder}/${encodeURIComponent(name)}.png`;
 
-const suppliedMotifs = new Set(['龙','凤','虎','鹿','鹤','竹','兰','梅','菊','云纹']);
-export const motifImage = (name: string) => suppliedMotifs.has(name)
-  ? `./assets/preview/references/${encodeURIComponent(name)}.webp` : asset('motifs', name);
+export const primaryMotifs = ['龙','凤','虎','鹿','鹤'];
+export const secondaryMotifs = ['竹','兰','梅','菊','云纹'];
+const suppliedMotifs = new Set([...primaryMotifs, ...secondaryMotifs]);
+export const motifImage = (name: string) =>
+  `./assets/preview/references/${encodeURIComponent(name)}.webp`;
 
 function ReferenceFilter({id}: {id: string}) {
   return <filter id={id} colorInterpolationFilters="sRGB">
@@ -40,10 +42,17 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
 }) {
   const [zoom, setZoom] = useState(false);
   const id = useId();
-  const drag = useRef<{pointer: number; dx: number; dy: number} | null>(null);
+  const drag = useRef<{
+    pointer: number; name: string; element: SVGGElement;
+    dx: number; dy: number; x: number; y: number; originX: number; originY: number;
+  } | null>(null);
+  const frame = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+  }, []);
   const motifs = [
-    ...(cfg.primary ? [{name: cfg.primary, x: 180, y: 174, size: 44}] : []),
-    ...cfg.secondary.map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 24})),
+    ...(primaryMotifs.includes(cfg.primary) ? [{name: cfg.primary, x: 180, y: 174, size: 44}] : []),
+    ...cfg.secondary.filter(name => secondaryMotifs.includes(name)).map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 24})),
   ];
 
   const colorIndex = Math.max(0, Object.keys(palette).indexOf(cfg.color));
@@ -76,17 +85,34 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   }, []);
 
   function move(name: string, x: number, y: number) {
-    const left = Math.round(Math.min(230, Math.max(130, x)));
-    const top = Math.round(Math.min(291, Math.max(138, y)));
-    onMotifMove?.(name, `${left}, ${top}`);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      onMotifMove?.(name, `${x.toFixed(2)}, ${y.toFixed(2)}`);
+    }
   }
 
-  function pointerPosition(event: PointerEvent<SVGImageElement>) {
+  function pointerPosition(event: PointerEvent<SVGGElement>) {
     const matrix = event.currentTarget.ownerSVGElement?.getScreenCTM();
     return matrix && new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
   }
 
-  function nudge(event: KeyboardEvent<SVGImageElement>, name: string, x: number, y: number) {
+  function stopDrag(cancelled = false) {
+    const active = drag.current;
+    if (!active) return;
+    drag.current = null;
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+      frame.current = null;
+    }
+    const x = cancelled ? active.originX : active.x;
+    const y = cancelled ? active.originY : active.y;
+    active.element.setAttribute('transform', `translate(${x} ${y})`);
+    if (active.element.hasPointerCapture(active.pointer)) {
+      active.element.releasePointerCapture(active.pointer);
+    }
+    if (!cancelled) move(active.name, x, y);
+  }
+
+  function nudge(event: KeyboardEvent<SVGGElement>, name: string, x: number, y: number) {
     const step = event.shiftKey ? 10 : 2;
     const offsets: Record<string, [number, number]> = {ArrowUp: [0, -step], ArrowDown: [0, step], ArrowLeft: [-step, 0], ArrowRight: [step, 0]};
     const offset = offsets[event.key];
@@ -100,12 +126,6 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const trim = ['月白','缃色','霜灰'].includes(cfg.color) ? '#856c41' : '#ebd29c';
   const has = (module: string) => cfg.extras.includes(module);
 
-  const body = cut ? (cfg.gender === '女款'
-    ? 'M128 107L156 90H204L232 107L220 203L235 326H125L140 203Z'
-    : 'M112 106L154 89H206L248 106L247 326H113Z')
-    : cfg.gender === '女款'
-    ? 'M130 119L162 106 180 120 198 106 230 119 217 201 224 243 235 305Q180 321 125 305L136 243 143 201Z'
-    : 'M126 119L162 106 180 120 198 106 234 119 227 213 238 305Q180 319 122 305L133 213Z';
   const cuffPlacement = cfg.gender === '男款' ? 'translate(48 252) rotate(10)' : 'translate(81 209) rotate(18)';
   const cuffWidth = cfg.gender === '男款' ? 43 : 32;
   const mirror = 'translate(360 0) scale(-1 1)';
@@ -122,35 +142,17 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
       <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看上衣' : '查看细节'}</button>
     </div>
     <div className="avatar-stage" style={{background: '#fff'}}>
-      <svg viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
+      <svg style={{touchAction: onMotifMove ? 'none' : undefined}} viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
         aria-label={`${cfg.gender}、${cfg.style}、${cfg.color}的写实样衣定制预览`}>
         <defs>
           <ReferenceFilter id={`${id}-reference`}/>
-          <pattern id={`${id}-satin-stitches`} width="1.25" height="1.25" patternUnits="userSpaceOnUse" patternTransform="rotate(38)">
-            <path d="M0 .24H1.05" stroke="#fff6dc" strokeWidth=".32" opacity=".7"/>
-            <path d="M0 .74H1.05" stroke="#493421" strokeWidth=".20" opacity=".38"/>
-          </pattern>
-          <filter id={`${id}-primary-thread`} x="-8%" y="-8%" width="116%" height="116%" colorInterpolationFilters="sRGB">
-            <feTurbulence type="fractalNoise" baseFrequency="1.2 .25" numOctaves="2" seed="8" result="fiber"/>
-            <feComposite in="fiber" in2="SourceAlpha" operator="in" result="thread"/>
-            <feBlend in="SourceGraphic" in2="thread" mode="soft-light"/>
-            <feDropShadow dx="0" dy=".28" stdDeviation=".16" floodColor="#3b2919" floodOpacity=".35"/>
-          </filter>
           {cutImage && <mask id={`${id}-cut-alpha`} x="36" y="56" width="288" height="288" maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
             <image href={cutImage} x="36" y="56" width="288" height="288"/>
           </mask>}
-          <pattern id={`${id}-stitches`} width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(32)">
-            <path d="M0 .5H2.2" stroke="#fff5df" strokeWidth=".38" opacity=".48"/>
-            <path d="M0 1.4H2.2" stroke="#38291b" strokeWidth=".30" opacity=".32"/>
-          </pattern>
-          <filter id={`${id}-thread-relief`} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
-            <feDropShadow dx="0" dy=".42" stdDeviation=".28" floodColor="#322719" floodOpacity=".32"/>
-          </filter>
           {previousCut && <mask id={`${id}-previous-alpha`} x="36" y="56" width="288" height="288" maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
             <image href={previousCut} x="36" y="56" width="288" height="288"/>
           </mask>}
           <clipPath id={`${id}-sample`}><rect x={sampleX} y={sampleY} width="338" height="320"/></clipPath>
-          <clipPath id={`${id}-body`}><path d={body}/></clipPath>
         </defs>
         {cutImage ? <g key={cutImage}>
           {previousCut && <g key={previousCut} className="garment-previous" style={{isolation: 'isolate'}} pointerEvents="none">
@@ -167,41 +169,61 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`}/>
         </svg>}
         {hasCape && <path d={cape} fill={color} fillOpacity=".18" stroke={trim} strokeOpacity=".7"/>}
-        <g data-layer="motif" clipPath={`url(#${id}-body)`}>
+        <g data-layer="motif">
           {motifs.map(({name, x, y, size}) => {
-            const [storedX, storedY] = (form[motifPositionKey(name)] || '').split(',').map(Number);
-            const placed = Number.isFinite(storedX) && Number.isFinite(storedY);
-            const centerX = placed ? storedX : x;
-            const centerY = placed ? storedY : y;
-            const x0 = centerX - size / 2;
-            const y0 = centerY - size / 2;
-            const threadMask = `${id}-thread-${name}`;
-            return <g key={name} filter={suppliedMotifs.has(name) ? `url(#${id}-thread-relief)` : undefined}>
-              <mask id={threadMask} x={x0} y={y0} width={size} height={size} maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
-                <image href={motifImage(name)} x={x0} y={y0} width={size} height={size}
-                  filter={suppliedMotifs.has(name) ? `url(#${id}-reference)` : undefined}/>
-              </mask>
-              <image href={motifImage(name)} x={x0} y={y0}
-              width={size} height={size} filter={suppliedMotifs.has(name) ? `url(#${id}-reference)` : `url(#${id}-${name === cfg.primary ? 'primary-thread' : 'thread-relief'})`} role="img" aria-label={onMotifMove ? `${name}纹样，可拖动或用方向键移动` : `${name}纹样`}
+            const stored = (form[motifPositionKey(name)] || '').split(',').map(Number);
+            const placed = stored.length === 2 && stored.every(Number.isFinite);
+            const centerX = placed ? stored[0] : x;
+            const centerY = placed ? stored[1] : y;
+            return <g key={name} className="movable-motif" transform={`translate(${centerX} ${centerY})`}
+              role="img" aria-label={onMotifMove ? `${name}纹样，可自由拖动或用方向键移动` : `${name}纹样`}
               tabIndex={onMotifMove ? 0 : undefined}
-              style={onMotifMove ? {cursor: 'move', touchAction: 'none'} : undefined}
+              style={onMotifMove ? {cursor: 'grab', touchAction: 'none'} : undefined}
+              onDragStart={event => event.preventDefault()}
               onPointerDown={event => {
                 if (!onMotifMove || !event.isPrimary || event.button !== 0) return;
                 const point = pointerPosition(event);
                 if (!point) return;
+                event.preventDefault();
+                event.currentTarget.focus({preventScroll: true});
                 event.currentTarget.setPointerCapture(event.pointerId);
-                drag.current = {pointer: event.pointerId, dx: centerX - point.x, dy: centerY - point.y};
+                drag.current = {
+                  pointer: event.pointerId, name, element: event.currentTarget,
+                  dx: centerX - point.x, dy: centerY - point.y,
+                  x: centerX, y: centerY, originX: centerX, originY: centerY,
+                };
               }}
               onPointerMove={event => {
                 const active = drag.current;
                 if (!active || active.pointer !== event.pointerId) return;
                 const point = pointerPosition(event);
-                if (point) move(name, point.x + active.dx, point.y + active.dy);
+                if (!point) return;
+                active.x = point.x + active.dx;
+                active.y = point.y + active.dy;
+                if (frame.current === null) {
+                  frame.current = requestAnimationFrame(() => {
+                    frame.current = null;
+                    if (drag.current === active) {
+                      active.element.setAttribute('transform', `translate(${active.x} ${active.y})`);
+                    }
+                  });
+                }
               }}
-              onLostPointerCapture={() => {drag.current = null;}}
-              onKeyDown={onMotifMove ? event => nudge(event, name, centerX, centerY) : undefined}/>
-              <rect x={x0} y={y0} width={size} height={size} pointerEvents="none"
-                mask={`url(#${threadMask})`} fill={`url(#${id}-${name === cfg.primary ? 'satin-stitches' : 'stitches'})`}/>
+              onPointerUp={event => {
+                if (drag.current?.pointer !== event.pointerId) return;
+                const point = pointerPosition(event);
+                if (point) {
+                  drag.current.x = point.x + drag.current.dx;
+                  drag.current.y = point.y + drag.current.dy;
+                }
+                stopDrag();
+              }}
+              onPointerCancel={() => stopDrag(true)}
+              onLostPointerCapture={() => stopDrag(true)}
+              onKeyDown={onMotifMove ? event => nudge(event, name, centerX, centerY) : undefined}>
+              <image href={motifImage(name)} x={-size / 2} y={-size / 2} width={size} height={size}
+                filter={`url(#${id}-reference)`} pointerEvents="none"/>
+              <rect x={-size / 2} y={-size / 2} width={size} height={size} fill="transparent"/>
             </g>;
           })}
         </g>
@@ -235,7 +257,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
       </svg>
     </div>
     <div className="preview-caption">
-      {onMotifMove && <small>{motifs.length ? '拖动衣身上的纹样调整位置，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
+      {onMotifMove && <small>{motifs.length ? '拖动纹样自由摆放，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
       <span>{[cfg.primary,...cfg.secondary,...cfg.extras.filter(name => name !== '档期加急')].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>

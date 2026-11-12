@@ -73,3 +73,8 @@ button.cta:hover{background:var(--cinnabar);color:white}
 @keyframes garment-fade-out{from{opacity:1}to{opacity:0}}
 @keyframes garment-fade-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.garment-previous{display:none}.garment-enter{animation:none}}
+
+.movable-motif{outline:none;user-select:none;-webkit-user-select:none}
+.movable-motif:focus{outline:none}
+.movable-motif:focus-visible>rect{stroke:#9c8761;stroke-width:.45;stroke-dasharray:1.5 2}
+.movable-motif:active{cursor:grabbing!important}
