@@ -67,12 +67,9 @@ button.cta:hover{background:var(--cinnabar);color:white}
 @media(min-width:900px){.custom-workspace .fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}}
 @media(max-width:767px){.custom-workspace{display:flex;flex-direction:column;overflow-y:auto}.custom-workspace .drawer-body{overflow:visible;flex:none;order:2;padding-bottom:2rem}.fitting-preview{order:1;flex:none;overflow:visible;border-left:0;border-bottom:1px solid #ddd;padding:1rem var(--pad-x)}.avatar-stage{min-height:0;height:15rem;flex:none}.avatar-stage>svg{min-height:0;height:15rem}.preview-title h3{font-size:.9rem}.preview-caption small{font-size:.56rem}.preview-caption{padding-top:.6rem;gap:.3rem}.custom-workspace.single-workspace .drawer-body{flex:1}}
 
-/* Sleeve changes pivot at the shoulder while the torso settles in place. */
-.garment-change .garment-sleeves{transform-box:view-box;transform-origin:180px 104px}
-.garment-change.extending .garment-sleeves{animation:sleeves-extend .75s cubic-bezier(.2,.7,.25,1) both}
-.garment-change.shortening .garment-sleeves{animation:sleeves-shorten .65s cubic-bezier(.2,.7,.25,1) both}
-.garment-change .garment-torso{animation:garment-settle .45s ease-out both}
-@keyframes sleeves-extend{from{transform:scaleY(.55);opacity:.35}to{transform:scaleY(1);opacity:1}}
-@keyframes sleeves-shorten{from{transform:scaleY(1.45);opacity:.35}to{transform:scaleY(1);opacity:1}}
-@keyframes garment-settle{from{opacity:.5}to{opacity:1}}
-@media(prefers-reduced-motion:reduce){.garment-change .garment-sleeves,.garment-change .garment-torso{animation:none}}
+/* Crossfade complete garment silhouettes to keep shoulder seams continuous. */
+.garment-previous{animation:garment-fade-out .6s ease-in-out both}
+.garment-enter{animation:garment-fade-in .6s ease-in-out both}
+@keyframes garment-fade-out{from{opacity:1}to{opacity:0}}
+@keyframes garment-fade-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.garment-previous{display:none}.garment-enter{animation:none}}

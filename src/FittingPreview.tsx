@@ -1,4 +1,4 @@
-import {useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent} from 'react';
+import {useEffect, useLayoutEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent} from 'react';
 
 const palette:Record<string,string>={朱砂:'#ab3f38',玄墨:'#282c30',靛青:'#344c78',月白:'#e8eee9',绛紫:'#614663',鎏金:'#b99b56',黛蓝:'#305560',松绿:'#42654e',赭石:'#91624a',缃色:'#dac778',霜灰:'#a8afb2',胭脂:'#b66b7b'};
 
@@ -35,13 +35,19 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
   const cut = ({'长拳服': 'changquan', '太极服': 'taiji', '南拳服': 'nanquan'} as Record<string, string>)[cfg.style];
   const cutImage = cut ? `./assets/preview/cuts/${cut}-${sampleSheet}.webp` : '';
 
-  const sleeveLength = cut === 'taiji' ? 3 : cut === 'nanquan' ? (cfg.gender === '男款' ? 0 : 1) : 2;
-  const previousSleeveLength = useRef(sleeveLength);
-  const sleeveMotion = sleeveLength > previousSleeveLength.current ? 'extending'
-    : sleeveLength < previousSleeveLength.current ? 'shortening' : '';
-  useEffect(() => {
-    previousSleeveLength.current = sleeveLength;
-  }, [sleeveLength]);
+  const [previousCut, setPreviousCut] = useState('');
+  const lastCut = useRef(cutImage);
+  useLayoutEffect(() => {
+    const previous = lastCut.current;
+    lastCut.current = cutImage;
+    if (!previous || previous === cutImage) {
+      setPreviousCut('');
+      return;
+    }
+    setPreviousCut(previous);
+    const timer = setTimeout(() => setPreviousCut(''), 600);
+    return () => clearTimeout(timer);
+  }, [cutImage]);
   useEffect(() => {
     for (const style of ['changquan', 'taiji', 'nanquan']) {
       for (const gender of ['male', 'female']) {
@@ -121,21 +127,23 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
           <filter id={`${id}-thread-relief`} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
             <feDropShadow dx="0" dy=".42" stdDeviation=".28" floodColor="#322719" floodOpacity=".32"/>
           </filter>
-          <clipPath id={`${id}-sleeves`}>
-            <rect x="36" y="56" width="78" height="288"/><rect x="246" y="56" width="78" height="288"/>
-          </clipPath>
-          <clipPath id={`${id}-torso`}><rect x="114" y="56" width="132" height="288"/></clipPath>
+          {previousCut && <mask id={`${id}-previous-alpha`} x="36" y="56" width="288" height="288" maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
+            <image href={previousCut} x="36" y="56" width="288" height="288"/>
+          </mask>}
           <clipPath id={`${id}-sample`}><rect x={sampleX} y={sampleY} width="338" height="320"/></clipPath>
           <clipPath id={`${id}-body`}><path d={body}/></clipPath>
         </defs>
-        {cutImage ? <g key={cutImage} className={sleeveMotion ? `garment-change ${sleeveMotion}` : undefined}>
-          {['torso', 'sleeves'].map(part => <g key={part} clipPath={`url(#${id}-${part})`}>
-            <g className={`garment-${part}`} style={{isolation: 'isolate'}}>
-              <image href={cutImage} x="36" y="56" width="288" height="288"/>
-              <rect x="36" y="56" width="288" height="288" fill={color}
-                mask={`url(#${id}-cut-alpha)`} style={{mixBlendMode: 'multiply'}}/>
-            </g>
-          </g>)}
+        {cutImage ? <g key={cutImage}>
+          {previousCut && <g key={previousCut} className="garment-previous" style={{isolation: 'isolate'}} pointerEvents="none">
+            <image href={previousCut} x="36" y="56" width="288" height="288"/>
+            <rect x="36" y="56" width="288" height="288" fill={color}
+              mask={`url(#${id}-previous-alpha)`} style={{mixBlendMode: 'multiply'}}/>
+          </g>}
+          <g className={previousCut ? 'garment-enter' : undefined} style={{isolation: 'isolate'}}>
+            <image href={cutImage} x="36" y="56" width="288" height="288"/>
+            <rect x="36" y="56" width="288" height="288" fill={color}
+              mask={`url(#${id}-cut-alpha)`} style={{mixBlendMode: 'multiply'}}/>
+          </g>
         </g> : <svg x="32" y="56" width="296" height="288" viewBox={`${sampleX} ${sampleY} 338 320`} aria-hidden="true">
           <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`}/>
         </svg>}
