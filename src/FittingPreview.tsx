@@ -32,15 +32,23 @@ export function MotifThumbnail({name}: {name: string}) {
   </svg>;
 }
 export const motifPositionKey = (name: string) => `纹样位置 · ${name}`;
+export const motifSizeKey = (name: string) => `纹样大小 · ${name}`;
+
+function motifScale(value?: string) {
+  const percentage = Number.parseFloat(value || '');
+  return Number.isFinite(percentage) ? Math.min(300, Math.max(25, percentage)) : 100;
+}
 
 export const materials = ['真丝', '仿丝', '棉麻'];
 
-export default function FittingPreview({cfg, form, onMotifMove}: {
+export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: {
   cfg: Outfit;
   form: Record<string, string>;
   onMotifMove?: (name: string, position: string) => void;
+  onMotifResize?: (name: string, percentage: string) => void;
 }) {
   const [zoom, setZoom] = useState(false);
+  const [selectedName, setSelectedName] = useState('');
   const id = useId();
   const drag = useRef<{
     pointer: number; name: string; element: SVGGElement;
@@ -54,6 +62,13 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
     ...(primaryMotifs.includes(cfg.primary) ? [{name: cfg.primary, x: 180, y: 174, size: 44}] : []),
     ...cfg.secondary.filter(name => secondaryMotifs.includes(name)).map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 24})),
   ];
+
+  const activeMotif = motifs.find(motif => motif.name === selectedName) || motifs[0];
+  const activeScale = activeMotif ? motifScale(form[motifSizeKey(activeMotif.name)]) : 100;
+
+  function resize(percentage: number) {
+    if (activeMotif) onMotifResize?.(activeMotif.name, `${Math.min(300, Math.max(25, percentage))}%`);
+  }
 
   const colorIndex = Math.max(0, Object.keys(palette).indexOf(cfg.color));
   const sampleX = 45 + (colorIndex % 4) * 338;
@@ -170,7 +185,8 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
         </svg>}
         {hasCape && <path d={cape} fill={color} fillOpacity=".18" stroke={trim} strokeOpacity=".7"/>}
         <g data-layer="motif">
-          {motifs.map(({name, x, y, size}) => {
+          {motifs.map(({name, x, y, size: baseSize}) => {
+            const size = baseSize * motifScale(form[motifSizeKey(name)]) / 100;
             const stored = (form[motifPositionKey(name)] || '').split(',').map(Number);
             const placed = stored.length === 2 && stored.every(Number.isFinite);
             const centerX = placed ? stored[0] : x;
@@ -178,6 +194,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
             return <g key={name} className="movable-motif" transform={`translate(${centerX} ${centerY})`}
               role="img" aria-label={onMotifMove ? `${name}纹样，可自由拖动或用方向键移动` : `${name}纹样`}
               tabIndex={onMotifMove ? 0 : undefined}
+              onFocus={() => setSelectedName(name)}
               style={onMotifMove ? {cursor: 'grab', touchAction: 'none'} : undefined}
               onDragStart={event => event.preventDefault()}
               onPointerDown={event => {
@@ -185,6 +202,7 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
                 const point = pointerPosition(event);
                 if (!point) return;
                 event.preventDefault();
+                setSelectedName(name);
                 event.currentTarget.focus({preventScroll: true});
                 event.currentTarget.setPointerCapture(event.pointerId);
                 drag.current = {
@@ -250,6 +268,20 @@ export default function FittingPreview({cfg, form, onMotifMove}: {
         </g>
       </svg>
     </div>
+    {onMotifResize && activeMotif && <div className="motif-size-control">
+      <label>调整图案
+        <select aria-label="选择要缩放的图案" value={activeMotif.name} onChange={event => setSelectedName(event.target.value)}>
+          {motifs.map(motif => <option key={motif.name} value={motif.name}>{motif.name}</option>)}
+        </select>
+      </label>
+      <div className="motif-size-slider">
+        <button type="button" aria-label="缩小图案" disabled={activeScale <= 25} onClick={() => resize(activeScale - 10)}>−</button>
+        <input type="range" aria-label="图案大小" min="25" max="300" step="5" value={activeScale}
+          onChange={event => resize(Number(event.target.value))}/>
+        <button type="button" aria-label="放大图案" disabled={activeScale >= 300} onClick={() => resize(activeScale + 10)}>＋</button>
+        <output aria-live="polite">{activeScale}%</output>
+      </div>
+    </div>}
     <div className="preview-caption">
       {onMotifMove && <small>{motifs.length ? '拖动纹样自由摆放，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 

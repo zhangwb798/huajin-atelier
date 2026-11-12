@@ -78,3 +78,11 @@ button.cta:hover{background:var(--cinnabar);color:white}
 .movable-motif:focus{outline:none}
 .movable-motif:focus-visible>rect{stroke:#9c8761;stroke-width:.45;stroke-dasharray:1.5 2}
 .movable-motif:active{cursor:grabbing!important}
+
+.motif-size-control{padding:.7rem 0;border-top:1px solid #e5e5e5;display:flex;flex-direction:column;gap:.5rem;font-size:.75rem}
+.motif-size-control label{display:flex;align-items:center;gap:.6rem}
+.motif-size-control select{border:1px solid #ddd;background:#fff;border-radius:4px;padding:.25rem .5rem}
+.motif-size-slider{display:flex;align-items:center;gap:.6rem}
+.motif-size-slider button{border:1px solid #ddd;border-radius:4px;width:2rem;height:2rem;font-size:1.1rem;flex:none}
+.motif-size-slider input{flex:1;min-width:0;accent-color:#9c8761}
+.motif-size-slider output{min-width:3rem;font-variant-numeric:tabular-nums}
