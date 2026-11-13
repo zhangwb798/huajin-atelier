@@ -221,6 +221,7 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
   const material = materials.includes(form['面料']) ? form['面料'] : materials[0];
   const stage = cfg.line === '表演';
   const color = palette[cfg.color] || palette.朱砂;
+  const cordTint = [1,3,5].map(index => Math.min(1, parseInt(color.slice(index,index+2),16) / 255 * 1.3));
   const trim = ['月白','缃色','霜灰'].includes(cfg.color) ? '#856c41' : '#ebd29c';
   const has = (module: string) => stage && cfg.extras.includes(module);
 
@@ -266,6 +267,10 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
         aria-label={`${cfg.gender}、${cfg.style}、${cfg.color}的写实样衣定制预览`}>
         <defs>
           <ReferenceFilter id={`${id}-reference`}/>
+          <filter id={`${id}-cord`} x="-8%" y="-35%" width="116%" height="180%" colorInterpolationFilters="sRGB">
+            <feColorMatrix type="matrix" values={`${cordTint[0]} 0 0 0 0  0 ${cordTint[1]} 0 0 0  0 0 ${cordTint[2]} 0 0  0 0 0 1 0`}/>
+            <feDropShadow dx="0" dy=".22" stdDeviation=".14" floodColor="#21170f" floodOpacity=".3"/>
+          </filter>
           {cutImage && <mask id={`${id}-cut-alpha`} x="36" y="56" width="288" height="288" maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
             <image href={cutImage} x="36" y="56" width="288" height="288"/>
           </mask>}
@@ -291,12 +296,10 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
         {adjustableFasteners && <g data-layer="fasteners" pointerEvents="none">
           {Array.from({length: fastenerCount}, (_, index) => {
             const y = 100 + index * (fastenerCount === 7 ? 29 : 48);
-            return <g key={index} data-fastener={index + 1}>
-              <path d={`M163.5 ${y}q12-5 24 0q-12 5-24 0Z`} fill={color} stroke="#30251f" strokeOpacity=".4" strokeWidth=".8"/>
-              <path d={`M165 ${y-.7}q10.5-2.8 21 0`} fill="none" stroke="#fff" strokeOpacity=".45" strokeWidth=".6"/>
-              <circle cx="175.5" cy={y} r="2.1" fill={color} stroke="#30251f" strokeOpacity=".45" strokeWidth=".6"/>
-              <path d={`M174.5 ${y-.7}q1-1 2 0`} fill="none" stroke="#fff" strokeOpacity=".55" strokeWidth=".55"/>
-            </g>;
+            return <image key={index} data-fastener={index + 1}
+              href="./assets/preview/accessories/frog-cord.webp"
+              x="163.5" y={y - 1.3} width="24" height="2.6"
+              preserveAspectRatio="xMidYMid meet" filter={`url(#${id}-cord)`}/>;
           })}
         </g>}
         {hasCape && <path d={cape} fill={color} fillOpacity=".18" stroke={trim} strokeOpacity=".7"/>}
