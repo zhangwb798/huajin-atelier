@@ -64,13 +64,58 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
     dx: number; dy: number; x: number; y: number; originX: number; originY: number;
   } | null>(null);
   const frame = useRef<number | null>(null);
+  const pan = useRef<{
+    pointer: number; startX: number; startY: number; inverse: DOMMatrix;
+    origin: typeof view; next: typeof view;
+  } | null>(null);
+  const panFrame = useRef<number | null>(null);
+  const [panning, setPanning] = useState(false);
+
+  function updatePan(event: PointerEvent<SVGSVGElement>) {
+    const active = pan.current;
+    if (!active || active.pointer !== event.pointerId) return;
+    const dx = event.clientX - active.startX;
+    const dy = event.clientY - active.startY;
+    active.next = {
+      ...active.origin,
+      x: active.origin.x - dx * active.inverse.a - dy * active.inverse.c,
+      y: active.origin.y - dx * active.inverse.b - dy * active.inverse.d,
+    };
+    if (panFrame.current === null) {
+      panFrame.current = requestAnimationFrame(() => {
+        panFrame.current = null;
+        if (pan.current === active) {
+          viewRef.current = active.next;
+          setView(active.next);
+        }
+      });
+    }
+  }
+
+  function stopPan(event: PointerEvent<SVGSVGElement>, cancelled = false) {
+    const active = pan.current;
+    if (!active || active.pointer !== event.pointerId) return;
+    if (!cancelled) updatePan(event);
+    pan.current = null;
+    if (panFrame.current !== null) {
+      cancelAnimationFrame(panFrame.current);
+      panFrame.current = null;
+    }
+    const next = cancelled ? active.origin : active.next;
+    viewRef.current = next;
+    setView(next);
+    setPanning(false);
+    if (event.currentTarget.hasPointerCapture(active.pointer)) {
+      event.currentTarget.releasePointerCapture(active.pointer);
+    }
+  }
   useEffect(() => {
     const svg = previewRef.current;
     if (!svg) return;
     function zoomView(event: WheelEvent) {
       if (!event.deltaY) return;
       event.preventDefault();
-      if (drag.current) return;
+      if (drag.current || pan.current) return;
       const matrix = svg!.getScreenCTM();
       if (!matrix) return;
       const anchor = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
@@ -92,6 +137,7 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
   }, []);
   useEffect(() => () => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
+    if (panFrame.current !== null) cancelAnimationFrame(panFrame.current);
   }, []);
   const motifs = [
     ...(primaryMotifs.includes(cfg.primary) ? [{name: cfg.primary, x: 180, y: 174, size: 44}] : []),
@@ -195,7 +241,26 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
       </div>
     </div>
     <div className="avatar-stage" style={{background: '#fff'}}>
-      <svg ref={previewRef} style={{touchAction: onMotifMove ? 'none' : undefined}} viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} role="img"
+      <svg ref={previewRef} style={{touchAction: 'none', cursor: panning ? 'grabbing' : 'grab'}}
+        viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} role="img"
+        onDragStart={event => event.preventDefault()}
+        onPointerDown={event => {
+          if (!event.isPrimary || event.button !== 0 || drag.current || pan.current) return;
+          if (onMotifMove && (event.target as Element).closest('.movable-motif')) return;
+          const matrix = event.currentTarget.getScreenCTM();
+          if (!matrix) return;
+          event.preventDefault();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          pan.current = {
+            pointer: event.pointerId, startX: event.clientX, startY: event.clientY,
+            inverse: matrix.inverse(), origin: {...viewRef.current}, next: {...viewRef.current},
+          };
+          setPanning(true);
+        }}
+        onPointerMove={updatePan}
+        onPointerUp={event => stopPan(event)}
+        onPointerCancel={event => stopPan(event, true)}
+        onLostPointerCapture={event => stopPan(event, true)}
         aria-label={`${cfg.gender}、${cfg.style}、${cfg.color}的写实样衣定制预览`}>
         <defs>
           <ReferenceFilter id={`${id}-reference`}/>
@@ -321,7 +386,7 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
       </div>
     </div>}
     <div className="preview-caption">
-      <small>鼠标放在样服上，滚动滚轮缩放视图。</small>
+      <small>滚轮缩放视图；按住样服或空白处拖动视图，按住图案拖动图案。</small>
       {onMotifMove && <small>{motifs.length ? '拖动纹样自由摆放，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
