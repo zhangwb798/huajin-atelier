@@ -156,7 +156,9 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
   const sampleY = [0, 361, 720][Math.floor(colorIndex / 4)];
   const sampleSheet = cfg.gender === '男款' ? 'male' : 'female';
   const cut = ({'长拳服': 'changquan', '太极服': 'taiji', '南拳服': 'nanquan'} as Record<string, string>)[cfg.style];
-  const cutImage = cut ? `./assets/preview/cuts/${cut}-${sampleSheet}.webp` : '';
+  const adjustableFasteners = cfg.style === '长拳服' && cfg.gender === '女款';
+  const fastenerCount = form['扣位'] === '7 扣' ? 7 : 3;
+  const cutImage = adjustableFasteners ? './assets/preview/cuts/changquan-female-plain.webp' : cut ? `./assets/preview/cuts/${cut}-${sampleSheet}.webp` : '';
 
   const [previousCut, setPreviousCut] = useState('');
   const lastCut = useRef(cutImage);
@@ -286,6 +288,17 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
         </g> : <svg x="32" y="56" width="296" height="288" viewBox={`${sampleX} ${sampleY} 338 320`} aria-hidden="true">
           <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`}/>
         </svg>}
+        {adjustableFasteners && <g data-layer="fasteners" pointerEvents="none">
+          {Array.from({length: fastenerCount}, (_, index) => {
+            const y = 100 + index * (fastenerCount === 7 ? 29 : 48);
+            return <g key={index} data-fastener={index + 1}>
+              <path d={`M163.5 ${y}q12-5 24 0q-12 5-24 0Z`} fill={color} stroke="#30251f" strokeOpacity=".4" strokeWidth=".8"/>
+              <path d={`M165 ${y-.7}q10.5-2.8 21 0`} fill="none" stroke="#fff" strokeOpacity=".45" strokeWidth=".6"/>
+              <circle cx="175.5" cy={y} r="2.1" fill={color} stroke="#30251f" strokeOpacity=".45" strokeWidth=".6"/>
+              <path d={`M174.5 ${y-.7}q1-1 2 0`} fill="none" stroke="#fff" strokeOpacity=".55" strokeWidth=".55"/>
+            </g>;
+          })}
+        </g>}
         {hasCape && <path d={cape} fill={color} fillOpacity=".18" stroke={trim} strokeOpacity=".7"/>}
         <g data-layer="motif">
           {motifs.map(({name, x, y, size: baseSize}) => {
@@ -389,10 +402,10 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
       <small>{onMotifMove ? '滚轮缩放视图；按住样服或空白处拖动视图，按住图案拖动图案。' : '滚轮缩放视图；按住样服拖动视图。'}</small>
       {onMotifMove && <small>{motifs.length ? '拖动纹样自由摆放，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
-      <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
+      <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}{adjustableFasteners ? ` · ${fastenerCount} 扣` : ''}</strong>
       <span>{[cfg.primary,...cfg.secondary,...(stage ? cfg.extras.filter(name => name !== '档期加急') : [])].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
       {cfg.custom && <small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}
-      <small>写实样衣展示配色和装饰位置。面料、扣数与成衣细节以配置单及打样为准。</small>
+      <small>写实样衣展示配色和装饰位置。面料与成衣细节以配置单及打样为准。</small>
     </div>
   </aside>;
 }
