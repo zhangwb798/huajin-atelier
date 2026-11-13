@@ -92,3 +92,6 @@ button.cta:hover{background:var(--cinnabar);color:white}
 .style-reference-grid button[aria-pressed=true]{border-color:#9c8761;box-shadow:inset 0 0 0 1px #9c8761;background:#faf8f3}
 .style-reference-grid img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain;filter:contrast(1.08)}
 .style-reference-grid span{display:block;text-align:center;font-size:.75rem;padding:.5rem 0 .2rem}
+
+.preview-view-controls{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
+.preview-view-controls output{font-size:.7rem;min-width:2.8rem;text-align:right;font-variant-numeric:tabular-nums;color:#68645d}

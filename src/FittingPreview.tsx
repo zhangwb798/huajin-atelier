@@ -47,7 +47,16 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
   onMotifMove?: (name: string, position: string) => void;
   onMotifResize?: (name: string, percentage: string) => void;
 }) {
-  const [zoom, setZoom] = useState(false);
+  const [view, setView] = useState({x: 32, y: 56, width: 296, height: 288});
+  const viewRef = useRef(view);
+  const previewRef = useRef<SVGSVGElement>(null);
+  const magnification = Math.round(296 / view.width * 100);
+
+  function resetView() {
+    const next = {x: 32, y: 56, width: 296, height: 288};
+    viewRef.current = next;
+    setView(next);
+  }
   const [selectedName, setSelectedName] = useState('');
   const id = useId();
   const drag = useRef<{
@@ -55,6 +64,32 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
     dx: number; dy: number; x: number; y: number; originX: number; originY: number;
   } | null>(null);
   const frame = useRef<number | null>(null);
+  useEffect(() => {
+    const svg = previewRef.current;
+    if (!svg) return;
+    function zoomView(event: WheelEvent) {
+      if (!event.deltaY) return;
+      event.preventDefault();
+      if (drag.current) return;
+      const matrix = svg!.getScreenCTM();
+      if (!matrix) return;
+      const anchor = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+      const current = viewRef.current;
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? svg!.clientHeight : 1);
+      const scale = Math.min(4, Math.max(.5, 296 / current.width * Math.exp(-Math.min(250, Math.max(-250, delta)) * .0015)));
+      const width = 296 / scale;
+      const height = 288 / scale;
+      const next = {
+        x: anchor.x - (anchor.x - current.x) * width / current.width,
+        y: anchor.y - (anchor.y - current.y) * height / current.height,
+        width, height,
+      };
+      viewRef.current = next;
+      setView(next);
+    }
+    svg.addEventListener('wheel', zoomView, {passive: false});
+    return () => svg.removeEventListener('wheel', zoomView);
+  }, []);
   useEffect(() => () => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
   }, []);
@@ -154,10 +189,13 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
   return <aside className="fitting-preview" aria-label="写实样衣定制预览">
     <div className="preview-title">
       <div><span className="section-label">HUAJIN / DESIGN PREVIEW</span><h3>彩服设计预览</h3></div>
-      <button type="button" onClick={() => setZoom(!zoom)} aria-pressed={zoom}>{zoom ? '查看上衣' : '查看细节'}</button>
+      <div className="preview-view-controls">
+        <output aria-label="视图缩放倍率">{magnification}%</output>
+        <button type="button" onClick={resetView}>重置视图</button>
+      </div>
     </div>
     <div className="avatar-stage" style={{background: '#fff'}}>
-      <svg style={{touchAction: onMotifMove ? 'none' : undefined}} viewBox={zoom ? '34 80 292 246' : '32 56 296 288'} role="img"
+      <svg ref={previewRef} style={{touchAction: onMotifMove ? 'none' : undefined}} viewBox={`${view.x} ${view.y} ${view.width} ${view.height}`} role="img"
         aria-label={`${cfg.gender}、${cfg.style}、${cfg.color}的写实样衣定制预览`}>
         <defs>
           <ReferenceFilter id={`${id}-reference`}/>
@@ -283,6 +321,7 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
       </div>
     </div>}
     <div className="preview-caption">
+      <small>鼠标放在样服上，滚动滚轮缩放视图。</small>
       {onMotifMove && <small>{motifs.length ? '拖动纹样自由摆放，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>
