@@ -86,3 +86,9 @@ button.cta:hover{background:var(--cinnabar);color:white}
 .motif-size-slider button{border:1px solid #ddd;border-radius:4px;width:2rem;height:2rem;font-size:1.1rem;flex:none}
 .motif-size-slider input{flex:1;min-width:0;accent-color:#9c8761}
 .motif-size-slider output{min-width:3rem;font-variant-numeric:tabular-nums}
+
+.style-reference-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;margin:.8rem 0}
+.style-reference-grid button{border:1px solid #ddd;border-radius:6px;padding:.45rem;background:#fff;overflow:hidden}
+.style-reference-grid button[aria-pressed=true]{border-color:#9c8761;box-shadow:inset 0 0 0 1px #9c8761;background:#faf8f3}
+.style-reference-grid img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain;filter:contrast(1.08)}
+.style-reference-grid span{display:block;text-align:center;font-size:.75rem;padding:.5rem 0 .2rem}
