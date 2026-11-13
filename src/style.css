@@ -95,3 +95,11 @@ button.cta:hover{background:var(--cinnabar);color:white}
 
 .preview-view-controls{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
 .preview-view-controls output{font-size:.7rem;min-width:2.8rem;text-align:right;font-variant-numeric:tabular-nums;color:#68645d}
+
+.shared-design{max-width:900px;margin:0 auto;padding:1.5rem;background:#fff}
+.shared-design>header{padding:0 0 1rem;gap:1rem}
+.shared-design h1{font-size:1.4rem;margin:.3rem 0}
+.shared-design>header a{font-size:.8rem;color:#62543b}
+.shared-design .fitting-preview{width:100%;border:1px solid #e5e5e5;border-radius:8px;padding:1rem;overflow:hidden}
+.shared-design .avatar-stage{height:65vh;flex:none}
+.shared-design>p{font-size:.8rem;color:#666;line-height:1.6}

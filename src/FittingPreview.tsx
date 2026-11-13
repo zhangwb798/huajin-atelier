@@ -386,7 +386,7 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
       </div>
     </div>}
     <div className="preview-caption">
-      <small>滚轮缩放视图；按住样服或空白处拖动视图，按住图案拖动图案。</small>
+      <small>{onMotifMove ? '滚轮缩放视图；按住样服或空白处拖动视图，按住图案拖动图案。' : '滚轮缩放视图；按住样服拖动视图。'}</small>
       {onMotifMove && <small>{motifs.length ? '拖动纹样自由摆放，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}</strong>

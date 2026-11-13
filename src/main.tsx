@@ -4,12 +4,13 @@ import{ArrowUpRight,X,ChevronRight,Check,ClipboardList,ArrowRight,Minus,Plus}fro
 import './style.css';
 import Story,{performance,competitionBasePrice} from './Story';
 import FittingPreview,{materials,MotifThumbnail,motifPositionKey,motifSizeKey,primaryMotifs,secondaryMotifs} from './FittingPreview';
+import {createDesignLink,readDesignLink,type DesignConfig} from './designShare';
 const BG1='./assets/wushu-hero.png';
 const colors=['朱砂','玄墨','靛青','月白','绛紫','鎏金','黛蓝','松绿','赭石','缃色','霜灰','胭脂'];
 const modules={竞赛:[],表演:[['亮片披风',220,'可脱卸，出场与谢幕使用'],['流苏腰饰',90,'随动作摆动，增强视觉节奏'],['织锦头饰',150,'与服装配色成套，可单买'],['档期加急',200,'7 天交付，应对临时演出任务']]} as const;
 const sizes=['领围','肩宽','身长','袖长','手围','胸围','腰围','臀围','裤长'];
 type Line='竞赛'|'表演';type Page=''|Line|'两态'|'量体'|'配置';
-type Config={line:Line;gender:string;style:string;color:string;primary:string;secondary:string[];custom:string;extras:string[]};
+type Config=DesignConfig;
 const initial:Config={line:'竞赛',gender:'女款',style:'长拳服',color:'朱砂',primary:'',secondary:[],custom:'',extras:[]};
 
 const submissionEndpoint = 'https://formspree.io/f/xjyydoog';
@@ -34,6 +35,7 @@ function SubmitRequest({cfg, form}: {cfg: Config; form: Record<string, string>})
     }
     setStatus('sending');
     try {
+      data.set('查看样服', createDesignLink(cfg, form));
       const response = await fetch(submissionEndpoint, {
         method: 'POST', headers: {Accept: 'application/json'}, body: data,
       });
@@ -44,7 +46,8 @@ function SubmitRequest({cfg, form}: {cfg: Config; form: Record<string, string>})
   }
   return <form onSubmit={submit}>
     <h3>提交定制需求</h3>
-    <p className="hint">提交后，配置与联系方式将通过 Formspree 发送给化劲坊，用于联系和确认报价。</p>
+    <a className="text-btn" href={createDesignLink(cfg, form)} target="_blank" rel="noopener noreferrer">查看将随邮件发送的样服</a>
+    <p className="hint">提交后，配置、样服预览链接与联系方式将发送给化劲坊，用于联系和确认报价。</p>
     <label className="field"><span>联系手机号</span>
       <input name="联系手机号" type="tel" autoComplete="tel" defaultValue={form['手机号'] || ''}
         required pattern=".*[0-9].*" maxLength={40} disabled={status === 'sending' || status === 'sent'}/>
@@ -74,6 +77,26 @@ return <><Background/><div className="shell"><header><button className="brand" o
 {page==='量体'&&<><p className="intro">竞赛服一人一版，按此单打版，不套标准号型。</p><h3>当前定制板块</h3><Choices items={['竞赛','表演']} value={cfg.line} onChange={v=>setCfg({...initial,line:v as Line,style:v==='竞赛'?'长拳服':'舞台演出'})}/><h3>01 / 基本信息</h3><div className="fields">{input('姓名')}{input('手机号','tel')}{input('身高（cm）','number')}{input('体重（kg）','number')}</div><Choices items={['女款','男款']} value={cfg.gender} onChange={v=>update('gender',v)}/><h3>02 / 身体尺寸 <small>cm · 贴身衣物测量</small></h3><div className="fields">{sizes.map(s=>input(s,'number'))}</div><button className="outline" onClick={()=>{if(sizes.some(s=>!form[s]||Number(form[s])<=0))setToast('请先完整填写九项有效身体尺寸。');else setToast('已记录个人尺寸。参考号型需由打版师核定，实际以尺寸单为准。')}}>核对九项身体尺寸</button><p className="hint">参考号型不能替代个人打版；请按贴身测量值填写，由打版师核对动作放量。</p><h3>03 / 工艺选择</h3><p className="hint">当前：{cfg.gender} · {cfg.style}。工艺按所选款式显示。</p>{([['版型',['做大','正常做','修身']],...(cfg.style==='太极服'?[['袖型',['上袖','连袖']]]:[]),...(cfg.style==='长拳服'&&cfg.gender==='女款'?[['扣位',['3 扣','7 扣']]]:[]),...(cfg.line==='表演'?[['装饰',['不做','满天星宽钻','满天星窄钻']],['扣型',['盘口','钻扣']],['钻色',['白钻','彩钻','黄钻']]]:[])] as [string,string[]][]).map(([label,opts])=><div className="craft" key={label}><p>{label}</p><Choices items={opts} value={form[label]||({'版型':'正常做','袖型':'上袖','扣位':'3 扣','装饰':'不做','扣型':'盘口','钻色':'白钻'} as Record<string,string>)[label]} onChange={v=>setForm({...form,[label]:v})}/>{label==='袖型'&&<p className="hint">上袖：肩线分明，活动量集中在上臂。连袖：无肩缝，垂坠感更强。</p>}</div>)}<p className="hint">工艺选项记录制作意向，附加工艺需确认报价。</p><h3>04 / 其他信息</h3>{input('收货地址')}{input('有无比赛时间需求')}{input('备注')}<p className="hint">胸围、臀围取最丰满处水平一周，腰围取最细处；肩宽取左右肩峰点直线距离，袖长自肩点至腕骨，身长自颈侧点至下摆。软尺不勒紧。</p><button className="solid" onClick={save}>生成配置单 <ArrowRight/></button><p className="hint">生成配置单后可选择是否提交定制需求。未提交的资料在刷新后清空。</p></>}
 {page==='配置'&&(saved?<><div className="status"><Check size={15}/> 配置已生成</div><h3>{saved.cfg.line==='竞赛'?'竞赛彩服':'表演娱乐彩服'}</h3>{[['性别',saved.cfg.gender],['版式 / 类型',saved.cfg.style],['主色',saved.cfg.color],['主要元素',saved.cfg.primary||'未选'],['次要元素',saved.cfg.secondary.join('、')||'未选'],['自定义元素',saved.cfg.custom||'无'],...(saved.cfg.line==='表演'?[['舞台元素',saved.cfg.extras.join('、')||'无']]:[]),...Object.entries(saved.form)].map(([k,v])=><div className="summary-row" key={k}><span>{k}</span><b>{v||'未填写'}</b></div>)}<div className="total"><span>预估总价</span><strong>¥{price(saved.cfg)}</strong></div><p className="hint">图案与附加工艺待报价，未计入小计。最终金额以打版师确认的面料、工艺与纹样为准。</p><SubmitRequest key={JSON.stringify(saved)} cfg={saved.cfg} form={saved.form}/><button className="solid" onClick={download}>下载配置单 <ArrowUpRight/></button><button className="text-btn" onClick={()=>{setCfg(saved.cfg);setForm(saved.form);open(saved.cfg.line)}}>继续修改 <ChevronRight/></button><button className="text-btn" onClick={()=>setSaved(null)}>清空配置 <Minus size={14}/></button></>:<div className="empty"><ClipboardList size={40} strokeWidth={1}/><h3>还没有配置内容</h3><p>从一件属于你的彩服开始。</p><button className="solid" onClick={()=>open('竞赛')}>去配竞赛服 <Plus size={16}/></button><button className="outline" onClick={()=>open('表演')}>去配表演服 <ArrowUpRight size={16}/></button></div>)}
 </div>{page!=='两态'&&<FittingPreview cfg={page==='配置'&&saved?saved.cfg:cfg} form={page==='配置'&&saved?saved.form:form} onMotifMove={page==='配置'?undefined:(name,position)=>setForm(current=>({...current,[motifPositionKey(name)]:position}))} onMotifResize={page==='配置'?undefined:(name,percentage)=>setForm(current=>({...current,[motifSizeKey(name)]:percentage}))}/>}</div><div className="drawer-foot">化劲坊 © 2026 · 定制需求须确认报价，网站不收款</div></section></div>}{toast&&<div className="toast" role="status"><Check size={18}/>{toast}</div>}</>}
-createRoot(document.getElementById('root')!).render(<App/>);
+function SharedDesign() {
+  useEffect(() => {document.body.style.overflow = '';}, []);
+  const design = readDesignLink(window.location.hash);
+  return <main className="shared-design">
+    <header><div><span className="section-label">HUAJIN ATELIER</span><h1>样服方案预览</h1></div>
+      <a href={window.location.pathname}>化劲坊首页</a></header>
+    {design ? <><FittingPreview cfg={design.cfg} form={design.form}/>
+      <p>此页面展示提交时的设计配置，可滚轮缩放、按住拖动查看。</p></>
+      : <p role="alert">预览链接不完整或格式无效，请使用邮件中的完整链接。</p>}
+  </main>;
+}
+function Site() {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const update = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', update);
+    return () => window.removeEventListener('hashchange', update);
+  }, []);
+  return hash.startsWith('#design=') ? <SharedDesign key={hash}/> : <App/>;
+}
+createRoot(document.getElementById('root')!).render(<Site/>);
 
 
