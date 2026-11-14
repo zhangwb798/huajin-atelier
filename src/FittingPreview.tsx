@@ -34,6 +34,22 @@ export function MotifThumbnail({name}: {name: string}) {
 export const motifPositionKey = (name: string) => `纹样位置 · ${name}`;
 export const motifSizeKey = (name: string) => `纹样大小 · ${name}`;
 
+export function motifCopies(form: Record<string, unknown>): Array<{id: string; name: string}> {
+  try {
+    const value = form['纹样副本'];
+    if (typeof value !== 'string' || value.length > 8000) return [];
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    const seen = new Set<string>();
+    return parsed.filter(item => {
+      if (!item || typeof item.id !== 'string' || !/^copy-[a-z0-9-]{1,50}$/.test(item.id) ||
+          !suppliedMotifs.has(item.name) || seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    }).slice(0, 30).map(item => ({id: item.id, name: item.name}));
+  } catch { return []; }
+}
+
 function motifScale(value?: string) {
   const percentage = Number.parseFloat(value || '');
   return Number.isFinite(percentage) ? Math.min(300, Math.max(25, percentage)) : 100;
@@ -41,10 +57,11 @@ function motifScale(value?: string) {
 
 export const materials = ['真丝', '仿丝', '棉麻'];
 
-export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: {
+export default function FittingPreview({cfg, form, onMotifMove, onMotifResize, onMotifEdit}: {
   cfg: Outfit;
   form: Record<string, string>;
   onMotifMove?: (name: string, position: string) => void;
+  onMotifEdit?: (changes: Record<string, string>) => void;
   onMotifResize?: (name: string, percentage: string) => void;
 }) {
   const [view, setView] = useState({x: 32, y: 56, width: 296, height: 288});
@@ -139,16 +156,35 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     if (panFrame.current !== null) cancelAnimationFrame(panFrame.current);
   }, []);
+  const copies = motifCopies(form).filter(copy => [cfg.primary,...cfg.secondary].includes(copy.name));
   const motifs = [
-    ...(primaryMotifs.includes(cfg.primary) ? [{name: cfg.primary, x: 180, y: 174, size: 44}] : []),
-    ...cfg.secondary.filter(name => secondaryMotifs.includes(name)).map((name, index) => ({name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 24})),
+    ...(primaryMotifs.includes(cfg.primary) ? [{id: cfg.primary, name: cfg.primary, x: 180, y: 174, size: 44}] : []),
+    ...cfg.secondary.filter(name => secondaryMotifs.includes(name)).map((name, index) => ({id: name, name, x: 146 + index * 33, y: 281 + index % 2 * 8, size: 24})),
   ];
 
-  const activeMotif = motifs.find(motif => motif.name === selectedName) || motifs[0];
-  const activeScale = activeMotif ? motifScale(form[motifSizeKey(activeMotif.name)]) : 100;
+  motifs.push(...copies.map(copy => ({...copy, x: 195, y: 190, size: copy.name === cfg.primary ? 44 : 24})));
+  const activeMotif = motifs.find(motif => motif.id === selectedName) || motifs[0];
+  const activeScale = activeMotif ? motifScale(form[motifSizeKey(activeMotif.id)]) : 100;
 
   function resize(percentage: number) {
-    if (activeMotif) onMotifResize?.(activeMotif.name, `${Math.min(300, Math.max(25, percentage))}%`);
+    if (activeMotif) onMotifResize?.(activeMotif.id, `${Math.min(300, Math.max(25, percentage))}%`);
+  }
+
+  function duplicateMotif() {
+    if (!activeMotif || !onMotifEdit || copies.length >= 30) return;
+    const id = 'copy-' + crypto.randomUUID();
+    const position = (form[motifPositionKey(activeMotif.id)] || `${activeMotif.x},${activeMotif.y}`).split(',').map(Number);
+    onMotifEdit({
+      '纹样副本': JSON.stringify([...copies,{id,name:activeMotif.name}]),
+      [motifPositionKey(id)]: `${position[0]+14}, ${position[1]+14}`,
+      [motifSizeKey(id)]: `${activeScale}%`,
+    });
+    setSelectedName(id);
+  }
+  function removeCopy() {
+    if (!activeMotif || !onMotifEdit) return;
+    onMotifEdit({'纹样副本': JSON.stringify(copies.filter(copy => copy.id !== activeMotif.id))});
+    setSelectedName('');
   }
 
   const colorIndex = Math.max(0, Object.keys(palette).indexOf(cfg.color));
@@ -267,6 +303,20 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
         aria-label={`${cfg.gender}、${cfg.style}、${cfg.color}的写实样衣定制预览`}>
         <defs>
           <ReferenceFilter id={`${id}-reference`}/>
+          <filter id={`${id}-fabric`} x="0" y="0" width="100%" height="100%" colorInterpolationFilters="sRGB">
+            <feComponentTransfer result="cloth">
+              {['R','G','B'].map(channel => {
+                const Tag = ('feFunc' + channel) as 'feFuncR' | 'feFuncG' | 'feFuncB';
+                return material === '棉麻' ? <Tag key={channel} type="linear" slope=".7" intercept=".3"/>
+                  : <Tag key={channel} type="gamma" amplitude="1" exponent={material === '真丝' ? 1.25 : 2.1} offset="0"/>;
+              })}
+            </feComponentTransfer>
+            <feTurbulence type="fractalNoise" baseFrequency={material === '棉麻' ? '.9 .65' : '.3 2.5'} numOctaves="2" seed="11"/>
+            <feColorMatrix type="saturate" values="0"/>
+            <feComponentTransfer><feFuncA type="linear" slope={cutImage ? (material === '棉麻' ? '.15' : '.045') : '0'}/></feComponentTransfer>
+            <feBlend in="cloth" mode="multiply"/>
+            <feComposite in2="SourceAlpha" operator="in"/>
+          </filter>
           <filter id={`${id}-cord`} x="-8%" y="-35%" width="116%" height="180%" colorInterpolationFilters="sRGB">
             <feColorMatrix type="matrix" values={`${cordTint[0]} 0 0 0 0  0 ${cordTint[1]} 0 0 0  0 0 ${cordTint[2]} 0 0  0 0 0 1 0`}/>
             <feDropShadow dx="0" dy=".22" stdDeviation=".14" floodColor="#21170f" floodOpacity=".3"/>
@@ -286,12 +336,12 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
               mask={`url(#${id}-previous-alpha)`} style={{mixBlendMode: 'multiply'}}/>
           </g>}
           <g className={previousCut ? 'garment-enter' : undefined} style={{isolation: 'isolate'}}>
-            <image href={cutImage} x="36" y="56" width="288" height="288"/>
+            <image href={cutImage} x="36" y="56" width="288" height="288" filter={`url(#${id}-fabric)`}/>
             <rect x="36" y="56" width="288" height="288" fill={color}
               mask={`url(#${id}-cut-alpha)`} style={{mixBlendMode: 'multiply'}}/>
           </g>
         </g> : <svg x="32" y="56" width="296" height="288" viewBox={`${sampleX} ${sampleY} 338 320`} aria-hidden="true">
-          <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`}/>
+          <image href={`./assets/preview/${sampleSheet}.webp`} width="1448" height="1086" clipPath={`url(#${id}-sample)`} filter={`url(#${id}-fabric)`}/>
         </svg>}
         {adjustableFasteners && <g data-layer="fasteners" pointerEvents="none">
           {Array.from({length: fastenerCount}, (_, index) => {
@@ -304,16 +354,16 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
         </g>}
         {hasCape && <path d={cape} fill={color} fillOpacity=".18" stroke={trim} strokeOpacity=".7"/>}
         <g data-layer="motif">
-          {motifs.map(({name, x, y, size: baseSize}) => {
-            const size = baseSize * motifScale(form[motifSizeKey(name)]) / 100;
-            const stored = (form[motifPositionKey(name)] || '').split(',').map(Number);
+          {motifs.map(({id: motifId, name, x, y, size: baseSize}) => {
+            const size = baseSize * motifScale(form[motifSizeKey(motifId)]) / 100;
+            const stored = (form[motifPositionKey(motifId)] || '').split(',').map(Number);
             const placed = stored.length === 2 && stored.every(Number.isFinite);
             const centerX = placed ? stored[0] : x;
             const centerY = placed ? stored[1] : y;
-            return <g key={name} className="movable-motif" transform={`translate(${centerX} ${centerY})`}
+            return <g key={motifId} className="movable-motif" transform={`translate(${centerX} ${centerY})`}
               role="img" aria-label={onMotifMove ? `${name}纹样，可自由拖动或用方向键移动` : `${name}纹样`}
               tabIndex={onMotifMove ? 0 : undefined}
-              onFocus={() => setSelectedName(name)}
+              onFocus={() => setSelectedName(motifId)}
               style={onMotifMove ? {cursor: 'grab', touchAction: 'none'} : undefined}
               onDragStart={event => event.preventDefault()}
               onPointerDown={event => {
@@ -321,11 +371,11 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
                 const point = pointerPosition(event);
                 if (!point) return;
                 event.preventDefault();
-                setSelectedName(name);
+                setSelectedName(motifId);
                 event.currentTarget.focus({preventScroll: true});
                 event.currentTarget.setPointerCapture(event.pointerId);
                 drag.current = {
-                  pointer: event.pointerId, name, element: event.currentTarget,
+                  pointer: event.pointerId, name: motifId, element: event.currentTarget,
                   dx: centerX - point.x, dy: centerY - point.y,
                   x: centerX, y: centerY, originX: centerX, originY: centerY,
                 };
@@ -357,7 +407,7 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
               }}
               onPointerCancel={() => stopDrag(true)}
               onLostPointerCapture={() => stopDrag(true)}
-              onKeyDown={onMotifMove ? event => nudge(event, name, centerX, centerY) : undefined}>
+              onKeyDown={onMotifMove ? event => nudge(event, motifId, centerX, centerY) : undefined}>
               <image href={motifImage(name)} x={-size / 2} y={-size / 2} width={size} height={size}
                 filter={`url(#${id}-reference)`} pointerEvents="none"/>
               <rect x={-size / 2} y={-size / 2} width={size} height={size} fill="transparent"/>
@@ -389,10 +439,12 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
     </div>
     {onMotifResize && activeMotif && <div className="motif-size-control">
       <label>调整图案
-        <select aria-label="选择要缩放的图案" value={activeMotif.name} onChange={event => setSelectedName(event.target.value)}>
-          {motifs.map(motif => <option key={motif.name} value={motif.name}>{motif.name}</option>)}
+        <select aria-label="选择要缩放的图案" value={activeMotif.id} onChange={event => setSelectedName(event.target.value)}>
+          {motifs.map(motif => <option key={motif.id} value={motif.id}>{motif.name}{motif.id !== motif.name ? ` · 副本 ${copies.findIndex(copy => copy.id === motif.id) + 1}` : ""}</option>)}
         </select>
       </label>
+      {onMotifEdit && <div className="choices"><button type="button" onClick={duplicateMotif} disabled={copies.length >= 30}>复制纹样</button>
+      {activeMotif.id !== activeMotif.name && <button type="button" onClick={removeCopy}>删除此副本</button>}</div>}
       <div className="motif-size-slider">
         <button type="button" aria-label="缩小图案" disabled={activeScale <= 25} onClick={() => resize(activeScale - 10)}>−</button>
         <input type="range" aria-label="图案大小" min="25" max="300" step="5" value={activeScale}
@@ -405,6 +457,7 @@ export default function FittingPreview({cfg, form, onMotifMove, onMotifResize}: 
       <small>{onMotifMove ? '滚轮缩放视图；按住样服或空白处拖动视图，按住图案拖动图案。' : '滚轮缩放视图；按住样服拖动视图。'}</small>
       {onMotifMove && <small>{motifs.length ? '拖动纹样自由摆放，也可选中后用方向键微调。' : '先选择纹样，再在衣身上拖动摆放。'}</small>}
 
+      <small>{material === '真丝' ? '真丝 · 柔和珠光、细密丝纹' : material === '仿丝' ? '仿丝 · 明亮缎光、平滑表面' : '棉麻 · 哑光散射、可见纤维织纹'}</small>
       <strong>{cfg.color} · {material} · {cfg.style} · {cfg.gender}{adjustableFasteners ? ` · ${fastenerCount} 扣` : ''}</strong>
       <span>{[cfg.primary,...cfg.secondary,...(stage ? cfg.extras.filter(name => name !== '档期加急') : [])].filter(Boolean).join(' / ') || '选择纹样与模块，查看搭配效果'}</span>
       {cfg.custom && <small>自定义纹样「{cfg.custom}」待设计确认，未绘入预览。</small>}

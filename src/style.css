@@ -103,3 +103,9 @@ button.cta:hover{background:var(--cinnabar);color:white}
 .shared-design .fitting-preview{width:100%;border:1px solid #e5e5e5;border-radius:8px;padding:1rem;overflow:hidden}
 .shared-design .avatar-stage{height:65vh;flex:none}
 .shared-design>p{font-size:.8rem;color:#666;line-height:1.6}
+
+.two-state-preview{margin:1.5rem 0;padding:1rem;background:#fbfaf7;border:1px solid #e5e0d5;border-radius:8px}
+.two-state-preview svg{display:block;width:100%;max-height:440px}
+.two-state-outline{transition:d .85s cubic-bezier(.25,.65,.25,1)}
+.two-state-belt{transition:opacity .7s}
+.two-state-preview figcaption{text-align:center;font-size:.75rem;color:#74654a;padding:.5rem}

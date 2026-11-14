@@ -1,5 +1,5 @@
 import {performance} from './Story';
-import {materials, primaryMotifs, secondaryMotifs, motifPositionKey, motifSizeKey} from './FittingPreview';
+import {materials, primaryMotifs, secondaryMotifs, motifPositionKey, motifSizeKey, motifCopies} from './FittingPreview';
 
 export type DesignConfig = {
   line: '竞赛' | '表演'; gender: string; style: string; color: string;
@@ -34,7 +34,9 @@ function sanitize(value: unknown): Design {
     const entry = data.form[key];
     if (typeof entry === 'string' && options.includes(entry)) form[key] = entry;
   }
-  for (const name of [cfg.primary, ...cfg.secondary].filter(Boolean)) {
+  const copies = motifCopies(data.form).filter(copy => [cfg.primary,...cfg.secondary].includes(copy.name));
+  if (copies.length) form['纹样副本'] = JSON.stringify(copies);
+  for (const name of [cfg.primary, ...cfg.secondary, ...copies.map(copy => copy.id)].filter(Boolean)) {
     const position = data.form[motifPositionKey(name)];
     if (typeof position === 'string' && position.length < 80) {
       const coordinates = position.split(',').map(Number);
@@ -65,7 +67,7 @@ export function createDesignLink(cfg: DesignConfig, form: Record<string, string>
 export function readDesignLink(hash: string): Design | null {
   try {
     const encoded = hash.slice('#design='.length);
-    if (!hash.startsWith('#design=') || !/^[A-Za-z0-9_-]{1,12000}$/.test(encoded)) return null;
+    if (!hash.startsWith('#design=') || !/^[A-Za-z0-9_-]{1,40000}$/.test(encoded)) return null;
     const binary = atob(encoded.replaceAll('-', '+').replaceAll('_', '/'));
     const json = new TextDecoder('utf-8', {fatal: true}).decode(Uint8Array.from(binary, ch => ch.charCodeAt(0)));
     return sanitize(JSON.parse(json));
